@@ -1,0 +1,1359 @@
+#!/usr/bin/perl -w
+
+=head1 NAME
+
+milli - A simple distributed bug tracking system.
+
+=cut
+
+=head1 SYNOPSIS
+
+  milli [options] sub-command [args]
+
+  available sub-commands:
+
+    add                 - Add a new bug.
+    append              - Append text to an existing bug.
+    close               - Change an open bug to closed.
+    closed              - List all currently closed bugs.
+    edit                - Allow a bug to be edited.
+    init                - Initialise the system.
+    list|search         - Display existing bugs.
+    open                - List all currently open bugs.
+    reopen              - Change a closed bug to open.
+    view                - Show all details about a specific bug.
+
+  Options:
+    --editor            - Specify which editor to use.
+    --message           - Use the given message rather than spawning an editor.
+    --state             - Restrict matches when searching.
+
+=cut
+
+=head1 ABOUT
+
+milli is an intentionally simple system which allows bugs to be stored
+inside projects, and merged in along with all other changes in exactly the
+way that a user of a distributed revision control system would expect.
+
+In short a project will have any and all bugs stored beneath the B<.milli>
+directory.  These bugs will be stored in random, but hostname-sepcific,
+filename such that multiple people merging and commiting will be unlikely
+to ever see conflicts.
+
+Any project may have bugs in two states:
+
+  * Open.
+  * Closed.
+
+Each bug will have an associated UID and number.  The UID associated with
+a bug will be unchanged and fixed at the time it is created, but the number
+is a purely local convience.
+
+=cut
+
+=head1 USING IT
+
+Usage of milli is divided into several distinct cases:
+
+  * Initialising a new project.
+  * Adding a bug.
+  * Searching for bugs.
+  * Viewing a specific bug.
+  * Updating a bug, or appending to an existing bug report.
+  * Closing or re-opening a bug.,
+
+These actions all work in a consistent manner, to avoid unpleasant suprises.
+
+
+=cut
+
+
+=head1 USAGE EXAMPLES
+
+To initialise a bug database within your project run:
+
+=for example begin
+
+   milli init
+
+=for example end
+
+Once you've initialised your milli database you will need to ensure that
+you add the B<.milli> database to your revision control system.
+
+To add a new bug, optionally specifying a title for it, please run:
+
+=for example begin
+
+   milli add This is my bug title
+
+=for example end
+
+If no title is specified a bug report will be created with a default
+title.  This will open an editor for you to enter the bug report text.
+
+The editer may be specified with the B<--editor> flag, the EDITOR environmental
+variable, and will otherwise default to B<vim>.
+
+Once a bug report has been created you should find that it is visible in the
+output of "milli list" or "milli open".  In both cases you'll see output which
+looks something like this:
+
+=for example begin
+
+  N:0001 [closed] testing me
+  N:0002 [closed] This is atest
+  N:0003 [  open] This is my bug title
+
+=for example end
+
+This listing report shows three things:  The number of the bug, the state
+of the bug ("open" vs. "closed") and the title of the bug.
+
+Each of the operations that is specific to a single bug report will allow you
+to specify the number of the bug.  For example if you wished to update the
+last bug, to append some text to it, you could run:
+
+=for example begin
+
+  milli append 3
+
+=for example end
+
+Similarly you could close the bug by running:
+
+=for example begin
+
+  milli close 3
+
+=for example end
+
+Note that to close a bug you do not need to give a justification, or add
+any content.  A bug may go from freshly opened to closed with no need for
+further updates.
+
+=cut
+
+
+=head1 BUG FILE FORMAT
+
+Internally each bug is stored in a file, beneath the B<.milli> directory.
+
+Each bug file has a random name which is designed to avoid potential collisions
+if a repository is shared between many users, upon different systems, as is
+common with distributed revision controls.
+
+Each bug report will have several fixed fields at the beginning, as this
+example shows:
+
+=for example begin
+
+   Title: This is atest
+   UID: 1269990083.P10668M151020.birthday.my.flat
+   Added: Wed Mar 31 00:01:23 2010
+   Status: open
+
+   I like pies, but I have none.
+
+=for example end
+
+The UID is essentially random, but should be unique, and is the portable
+sane way to refer to bugs.  When running B<milli list> you'll see a number
+reported next to each bug, but this number is valid only for the local system
+and may change when new bugs are reported.
+
+In short you may use the displayed "bug number" for carrying out local
+operations providing you realise that the number associated with a specific
+bug will change over time.  By contrast the UID will never change, so you
+may always run a command like this:
+
+=for example begin
+
+  milli view 1270024997.P15442M277230.birthday.my.flat
+
+=for example end
+
+=cut
+
+=head1 CUSTOMIZATION
+
+The template which is presented to the user when they report a new bug
+may be replaced.  If the file ".milli/new-bug-template" is present the
+contents of that file will be inserted in new reports, rather than the
+default message.
+
+If the file B<.milli/hook> exists, and is executable, it will be invoked
+when new bugs are added, bugs are closed, or comments are updated.
+
+The hook will be invoked with two arguments, the first will be a string
+defining the action which has caused the invocation, the second will be
+the name of the bug file.  For example you might use this to auto-add
+new bug reports to the repository with a hook like this:
+
+=for example begin
+
+   #!/bin/sh
+   if [ "$1" = "add" ]; then
+       hg add "$2"
+   fi
+
+=for example end
+
+=cut
+
+=head1 AUTHOR
+
+ Steve
+ --
+ http://www.steve.org.uk/
+
+=cut
+
+=head1 LICENSE
+
+Copyright (c) 2010 by Steve Kemp.  All rights reserved.
+
+This module is free software;
+you can redistribute it and/or modify it under
+the same terms as Perl itself.
+The LICENSE file contains the full text of the license.
+
+=cut
+
+
+#
+#  Pragmas
+#
+use strict;
+use warnings;
+
+
+#
+#  Modules
+#
+use File::Path;
+use Getopt::Long;
+use Pod::Usage;
+use Time::HiRes qw(gettimeofday);
+
+
+#
+#  Configuration options
+#
+my %CONFIG;
+
+
+#
+#  Parse any command line options.
+#
+parseCommandLineArguments();
+
+
+#
+#  Ensure we received an argument.
+#
+my ( $cmd, @args ) = @ARGV;
+if ( !defined($cmd) )
+{
+    usage();
+}
+
+
+#
+#  Decide what to do, based upon the command given.
+#
+if ( $cmd =~ /^init$/i )
+{
+
+    #
+    #  Initialise.
+    #
+    cmd_init();
+    exit 0;
+}
+elsif ( $cmd =~ /^add$/i )
+{
+
+    #
+    #  Add a bug.
+    #
+    cmd_add(@args);
+    exit 0;
+}
+elsif ( $cmd =~ /^append$/i )
+{
+
+    #
+    #  Append a section of text to an existing bug report.
+    #
+    cmd_append(@args);
+    exit 0;
+}
+elsif ( $cmd =~ /^html$/i )
+{
+
+    #
+    #  Output bugs as a simple HTML page.
+    #
+    cmd_html(@args);
+    exit 0;
+}
+elsif ( $cmd =~ /^(list|search)$/i )
+{
+
+    #
+    #  Find bugs.
+    #
+    cmd_search(@args);
+    exit 0;
+}
+elsif ( $cmd =~ /^open$/i )
+{
+
+    #
+    #  List only open bugs.
+    #
+    $CONFIG{ 'state' } = "open";
+    cmd_search(@args);
+    exit 0;
+}
+elsif ( $cmd =~ /^closed$/i )
+{
+
+    #
+    #  List only closed bugs.
+    #
+    $CONFIG{ 'state' } = "closed";
+    cmd_search(@args);
+    exit 0;
+}
+elsif ( $cmd =~ /^view$/i )
+{
+
+    #
+    #  View a single bug.
+    #
+    cmd_view(@args);
+    exit 0;
+}
+elsif ( $cmd =~ /^close$/i )
+{
+
+    #
+    #  Mark a bug as closed.
+    #
+    cmd_close(@args);
+    exit 0;
+}
+elsif ( $cmd =~ /^reopen$/i )
+{
+
+    #
+    #  Mark a bug as open.
+    #
+    cmd_reopen(@args);
+    exit 0;
+}
+elsif ( $cmd =~ /^edit$/i )
+{
+
+    #
+    #  Edit a bug.
+    #
+    cmd_edit(@args);
+    exit 0;
+}
+else
+{
+    usage();
+}
+
+exit 0;
+
+
+
+
+=begin doc
+
+Parse the command line options.
+
+=end doc
+
+=cut
+
+sub parseCommandLineArguments
+{
+    my $HELP   = 0;
+    my $MANUAL = 0;
+
+    #
+    #  Parse options.
+    #
+    if (
+        !GetOptions(
+
+            # Help options
+            "help",    \$HELP,
+            "manual",  \$MANUAL,
+            "verbose", \$CONFIG{ 'verbose' },
+
+            # Editor & message.
+            "editor=s",  \$CONFIG{ 'editor' },
+            "message=s", \$CONFIG{ 'message' },
+
+            # state, used for search/list, status is a synonym
+            "state=s",  \$CONFIG{ 'state' },
+            "status=s", \$CONFIG{ 'state' },
+        ) )
+    {
+        exit;
+    }
+
+    usage() if $HELP;
+    pod2usage( -verbose => 2 ) if $MANUAL;
+}
+
+
+=begin doc
+
+Show the usage of this script and exit.
+
+=end doc
+
+=cut
+
+sub usage
+{
+    pod2usage(1);
+    exit 1;
+}
+
+
+###
+###  Handlers for the commands.
+###
+#############################################################################
+
+
+=begin doc
+
+Inititalise a new .milli directory.
+
+=end doc
+
+=cut
+
+sub cmd_init
+{
+    if ( !-d ".milli" )
+    {
+        mkpath( ".milli", { verbose => 0 } );
+        exit 0;
+    }
+    else
+    {
+        print "There is already a .milli/ directory present here.\n";
+        exit 1;
+    }
+}
+
+
+=begin doc
+
+Add a new bug.
+
+The arguments specified are the optional title.
+
+=end doc
+
+=cut
+
+sub cmd_add
+{
+    my (@args) = (@_);
+
+    my $title = undef;
+    if ( scalar(@args) )
+    {
+        $title = join( " ", @args );
+    }
+
+    $title = "Untitled bug report" unless ( defined($title) );
+
+    #
+    #  Make a "random" filename, with the same UID as the content.s
+    #
+    my $uid  = randomUID();
+    my $file = ".milli/$uid.milli";
+
+    my $date = scalar localtime;
+
+    #
+    #  Write our template to it
+    #
+    open( FILE, ">", $file );
+    print FILE<<EOF;
+Title: $title
+UID: $uid
+Added: $date
+Status: open
+
+EOF
+
+
+    #
+    #  If we were given a message, add it to the file, and return without
+    # invoking the editor.
+    #
+    if ( $CONFIG{ 'message' } )
+    {
+        print FILE $CONFIG{ 'message' };
+        print FILE "\n";
+        close(NEW);
+        return;
+    }
+
+
+    if ( -e ".milli/new-bug-template" )
+    {
+        open( TMP, "<", ".milli/new-bug-template" ) or
+          die "Failed to open file $!";
+        while ( my $line = <TMP> )
+        {
+            print FILE $line;
+        }
+        close(TMP);
+    }
+    else
+    {
+
+        #
+        #  Otherwise add the default text, and show it in an editor.
+        #
+        print FILE<<EOF;
+# milli:
+# milli:  Enter your bug report here; it is better to write too much than
+# milli: too little.
+# milli:
+# milli:  Lines beginning with "# milli:" will be ignored, and removed,
+# milli: this file is saved.
+# milli:
+
+EOF
+        close(FILE);
+    }
+
+
+    #
+    #  Open the file in the users' editor.
+    #
+    editFile($file);
+
+    #
+    #  Once it was saved remove the lines that mention "# milli: "
+    #
+    removeMilli($file);
+
+    #
+    #  If there is a hook, run it.
+    #
+    if ( -x ".milli/hook" )
+    {
+        system( ".milli/hook", "add", $file );
+    }
+}
+
+
+
+=begin doc
+
+Output a HTML page for the bugs.
+
+=end doc
+
+=cut
+
+sub cmd_html
+{
+    my (@args) = (@_);
+
+    #
+    #  Get all bugs.
+    #
+    my $bugs = getBugs();
+
+
+    #
+    #  Open + closed bugs.
+    #
+    my $open;
+    my $closed;
+
+    foreach my $b (@$bugs)
+    {
+        if ( $b->{ 'status' } =~ /open/i )
+        {
+            push( @$open, $b );
+        }
+        else
+        {
+            push( @$closed, $b );
+        }
+    }
+
+    #
+    #  Sort both lists by date.
+    #
+
+    #
+    #  Counts
+    #
+    my $open_count   = $open   ? scalar(@$open)   : 0;
+    my $closed_count = $closed ? scalar(@$closed) : 0;
+
+
+    print <<EOH;
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <title>Bug reports</title>
+    <script type="text/javascript" src="http://static.steve.org.uk/js/jquery/jquery.js"></script>
+    <script type="text/javascript" src="http://www.steve.org.uk/jquery/dltoggle/jquery.dltoggle.js"></script>
+    <script type="text/javascript">
+   \$('.toggle').dltoggle( { "open-image"   : "http://steve.org.uk/jquery/dltoggle/open.gif",
+                         "closed-image" : "http://steve.org.uk/jquery/dltoggle/closed.gif" } );
+    </script>
+</head>
+
+ <body>
+  <div style="text-align: center;"><h1>Bug Reports</h1></div>
+EOH
+
+    print <<EOT;
+  <table>
+  <tr><td><b><a href="#open">Open bugs</a></b></td><td>$open_count</td></tr>
+  <tr><td><b><a href="#closed">Closed bugs</a></b></td><td>$closed_count</td></tr>
+  </table>
+EOT
+
+    print "<h2 id=\"open\">Open bugs</h2>\n";
+    print "<blockquote>\n";
+    print "<dl class=\"toggle\">\n";
+    foreach my $b (@$open)
+    {
+        print "<dt>$b->{'title'}</dt>\n";
+        print "<dd><pre>$b->{'body'}</pre></dd>\n";
+
+    }
+    print "</dl>\n";
+    print "</blockquote>\n";
+
+    print "<h2 id=\"closed\">Closed bugs</h2>\n";
+    print "<blockquote>\n";
+    print "<dl class=\"toggle\">\n";
+    foreach my $b (@$closed)
+    {
+        print "<dt>$b->{'title'}</dt>\n";
+        print "<dd><pre>$b->{'body'}</pre></dd>\n";
+    }
+    print "</dl>\n";
+    print "</blockquote>\n";
+
+    print <<EOF;
+ <hr />
+ <p style="text-align:right;">Produced by <a href="http://steve.org.uk/Software/milli/">milli</a>.</p>
+ </body>
+</html>
+EOF
+}
+
+
+
+=begin doc
+
+Search the existing bugs.
+
+Here search means "match against title and status".  Either of which
+is optional.
+
+=end doc
+
+=cut
+
+sub cmd_search
+{
+    my (@args) = (@_);
+
+    #
+    #  The search terms, if any.
+    #
+    my $terms = join( " ", @args );
+
+    #
+    #  Get all available bugs.
+    #
+    my $bugs = getBugs();
+
+    #
+    #  The state of the bugs the user is interested in.
+    #
+    my $status = $CONFIG{ 'state' } || "all";
+
+    #
+    #  For each bug
+    #
+    foreach my $bug (@$bugs)
+    {
+
+        #
+        #  Find basic meta-data.
+        #
+        my $b_title  = $bug->{ 'title' };
+        my $b_status = $bug->{ 'status' };
+        my $b_uid    = $bug->{ 'uid' };
+        my $b_file   = $bug->{ 'file' };
+        my $b_number = $bug->{ 'number' };
+
+        #
+        #  If the user is being specific about status then
+        # skip ones that don't match, as this is cheap.
+        #
+        if ( $status ne "all" )
+        {
+            next if ( lc($status) ne lc($b_status) );
+        }
+
+        #
+        #  If there are search terms then search the title.
+        #
+        #  All terms must match.
+        #
+        my $match = 1;
+        if ( length $terms )
+        {
+            foreach my $term ( split( /[ \t]/, $terms ) )
+            {
+                if ( $b_title !~ /\Q$term\E/i )
+                {
+                    $match = 0;
+                }
+            }
+        }
+
+        #
+        #  If we didn't find a match move on.
+        #
+        next unless ($match);
+
+        #
+        #  Otherwise show a summary of the bug.
+        #
+        print sprintf "N:%004d [%6s] %s", $b_number, $b_status, $b_title . "\n";
+    }
+}
+
+
+
+=begin doc
+
+Allow a bug to be updated.
+
+This mostly means:
+
+1.  find the file associated with a given bug.
+2.  Allow the user to edit that file.
+
+=end doc
+
+=cut
+
+sub cmd_edit
+{
+    my (@args) = (@_);
+
+    my $value = join( "", @args );
+
+    #
+    #  Ensure we know what we're operating upon
+    #
+    if ( !length($value) )
+    {
+        print
+          "You must specify a bug to edit, either by the UID, or via the number.\n";
+        print "\nFor example to edit bug number 3 you'd run:\n";
+        print "\tmilli edit 3\n\n";
+        exit 1;
+    }
+
+    #
+    #  Find the bug.
+    #
+    my $bug = getBugByUIDORNumber($value);
+
+    #
+    #  Edit the file the bug is stored in.
+    #
+    editFile( $bug->{ 'file' } );
+
+    #
+    #  If there is a hook, run it.
+    #
+    if ( -x ".milli/hook" )
+    {
+        system( ".milli/hook", "edit", $bug->{ 'file' } );
+    }
+}
+
+
+
+=begin doc
+
+Open an editor with a new block appended to the end of the file.
+
+This mostly means:
+
+   1.  find the file associated with a given bug.
+
+   2.  Append the new text.
+
+   3.  Allow the user to edit that file.
+
+=end doc
+
+=cut
+
+sub cmd_append
+{
+    my (@args) = (@_);
+    my $value = join( "", @args );
+
+
+    #
+    #  Ensure we know what we're operating upon
+    #
+    if ( !length($value) )
+    {
+        print
+          "You must specify a bug to append to, either by the UID, or via the number.\n";
+        print "\nFor example to append text to bug number 3 you'd run:\n";
+        print "\tmilli append 3\n\n";
+        exit 1;
+    }
+
+    #
+    #  Get the bug
+    #
+    my $bug = getBugByUIDORNumber($value);
+
+    #
+    #  Open the file.
+    #
+    open( NEW, ">>", $bug->{ 'file' } ) or
+      die "Failed to open file $bug->{'file'} for appending: $!";
+
+
+    my $date = scalar localtime;
+
+    #
+    #  If we were given a message add it, otherwise spawn the editor.
+    #
+    if ( $CONFIG{ 'message' } )
+    {
+        print NEW "\nModified:$date\n";
+        print NEW $CONFIG{ 'message' };
+        print NEW "\n";
+        close(NEW);
+        return;
+    }
+
+    #
+    #  Write out the new section
+    #
+    print NEW <<EOF;
+
+Modified: $date
+
+# milli:
+# milli:  Enter your bug update here; it is better to write too much than
+# milli: too little.
+# milli:
+# milli:  Lines beginning with "# milli:" will be ignored, and removed, once
+# milli: this file is saved.
+# milli:
+EOF
+    close(NEW);
+
+
+    #
+    #  Allow the user to make the edits.
+    #
+    editFile( $bug->{ 'file' } );
+
+    #
+    #  Once it was saved remove the lines that mention "# milli: "
+    #
+    removeMilli( $bug->{ 'file' } );
+
+    #
+    #  If there is a hook, run it.
+    #
+    if ( -x ".milli/hook" )
+    {
+        system( ".milli/hook", "append", $bug->{ 'file' } );
+    }
+
+}
+
+
+=begin doc
+
+View a specific bug.
+
+This means:
+
+   1.  Find the file associated with the bug.
+   2.  Open it and print it to the console.
+
+=end doc
+
+=cut
+
+sub cmd_view
+{
+    my (@args) = (@_);
+
+    my $value = join( "", @args );
+
+    #
+    #  Ensure we know what we're operating upon
+    #
+    if ( !length($value) )
+    {
+        print
+          "You must specify a bug to view, either by the UID, or via the number.\n";
+        print "\nFor example to view bug number 3 you'd run:\n";
+        print "\tmilli view 3\n\n";
+        exit 1;
+    }
+
+    #
+    #  Get the bug.
+    #
+    my $bug = getBugByUIDORNumber($value);
+
+    #
+    #  Show it to the console
+    #
+    open( FILE, "<", $bug->{ 'file' } ) or
+      die "Failed to open file for reading $bug->{'file'} $!";
+
+    while ( my $line = <FILE> )
+    {
+        print $line;
+    }
+    close(FILE);
+
+}
+
+
+=begin doc
+
+Close a given bug.
+
+=end doc
+
+=cut
+
+sub cmd_close
+{
+    my (@args) = (@_);
+
+    #
+    #  Get the bug.
+    #
+    my $value = join( "", @args );
+
+    #
+    #  Ensure we know what we're operating upon
+    #
+    if ( !length($value) )
+    {
+        print
+          "You must specify a bug to close, either by the UID, or via the number.\n";
+        print "\nFor example to close bug number 3 you'd run:\n";
+        print "\tmilli close 3\n\n";
+        exit 1;
+    }
+
+    changeBugState( $value, "closed" );
+}
+
+
+=begin doc
+
+Reopen a bug.
+
+=end doc
+
+=cut
+
+sub cmd_reopen
+{
+    my (@args) = (@_);
+
+    #
+    #  Get the bug.
+    #
+    my $value = join( "", @args );
+
+    #
+    #  Ensure we know what we're operating upon
+    #
+    if ( !length($value) )
+    {
+        print
+          "You must specify a bug to reopen, either by the UID, or via the number.\n";
+        print "\nFor example to reopen bug number 3 you'd run:\n";
+        print "\tmilli reopen 3\n\n";
+        exit 1;
+    }
+
+    changeBugState( $value, "open" );
+
+}
+
+
+
+
+###
+###  Utility functions.
+###
+#############################################################################
+
+
+
+=begin doc
+
+Change the statues of an existing bug.  Valid statuses are
+"opened" and "closed".
+
+=end doc
+
+=cut
+
+sub changeBugState
+{
+    my ( $value, $state ) = (@_);
+
+    #
+    #  Ensure the status is valid.
+    #
+    die "Invalid status $state" unless ( $state =~ /^(opened|closed)$/i );
+
+
+    #
+    #  Get the bug.
+    #
+    my $bug = getBugByUIDORNumber($value);
+
+    #
+    #  Ensure the bug isn't already in the specified state.
+    #
+    if ( lc( $bug->{ 'status' } ) eq lc($state) )
+    {
+        print "The bug is already $state!\n";
+        exit 1;
+    }
+
+    #
+    #  Open the file
+    #
+    open( NEW, ">>", $bug->{ 'file' } ) or
+      die "Failed to open file $bug->{'file'} for appending: $!";
+
+    #
+    #  Now write out the new status section.
+    #
+    my $date = scalar localtime;
+    print NEW <<EOF;
+
+Modified: $date
+Status: $state
+
+EOF
+
+    close(NEW);
+
+    #
+    #  If there is a hook, run it.
+    #
+    if ( -x ".milli/hook" )
+    {
+        system( ".milli/hook", $state, $bug->{ 'file' } );
+    }
+}
+
+
+
+=begin doc
+
+Attempt to discover the hostname of the current system.
+
+=end doc
+
+=cut
+
+sub findHostname
+{
+
+    #
+    #  Run each of the following commands to find the hostname,
+    # return the first one that produces non-empty results.
+    #
+    foreach my $cmd ( "uname -n", "hostname", "cat /etc/hostname",
+                      "cat /etc/HOSTNAME" )
+    {
+
+        #
+        #  Run it.
+        #
+        my $out = `$cmd`;
+        if ( defined($out) )
+        {
+
+            #
+            #  If there were results.
+            #
+            chomp($out);
+            return $out if ( length($out) );
+        }
+    }
+
+    return ("unknown.system");
+}
+
+
+
+=begin doc
+
+Generate a system UID.  This should be created with the hostname and
+time included, such that collisions when running upon multiple systems
+are unlikely.
+
+(A bug will be uniquely referenced by the UID, even though in practise
+people will use bug numbers they are prone to change.)
+
+=end doc
+
+=cut
+
+sub randomUID
+{
+
+    #
+    #  Get the time.
+    #
+    my ( $time, $microseconds ) = gettimeofday;
+    $time = ( $time =~ m/(\d+)/ )[0];
+    $microseconds =~ s/\D//g;
+
+    #
+    #  The values that feed into the filename.
+    #
+    my $hostname = findHostname();
+    my $unique   = "P$$" . "M$microseconds";
+    my $file     = join ".", $hostname, $time, $unique;
+
+    return ($file);
+}
+
+
+
+=begin doc
+
+Find and return an array of hashes, one for each existing bug.
+
+=end doc
+
+=cut
+
+sub getBugs
+{
+    my $results;
+    my $number = 0;
+
+    foreach my $file ( sort( glob(".milli/*.milli") ) )
+    {
+        $number += 1;
+
+        my $status;
+        my $title;
+        my $uid;
+        my $body;
+
+        open( FILE, "<", $file );
+        while ( my $line = <FILE> )
+        {
+            if ( $line =~ /^Title: (.*)/ )
+            {
+                $title = $1;
+            }
+            elsif ( $line =~ /^(Added|Modified):(.*)/ )
+            {
+
+                # ignored.
+            }
+            elsif ( $line =~ /^UID: (.*)/ )
+            {
+                $uid = $1;
+            }
+            elsif ( $line =~ /^Status: (.*)/i )
+            {
+                $status = $1;
+            }
+            else
+            {
+                $body .= $line;
+            }
+
+        }
+        close(FILE);
+
+        push( @$results,
+              {  file   => $file,
+                 body   => $body,
+                 number => $number,
+                 uid    => $uid,
+                 status => $status,
+                 title  => $title
+              } );
+    }
+
+    return ($results);
+}
+
+
+=begin doc
+
+Open the given file with either the users editor, the systems editor,
+or as a last resort vim.
+
+=end doc
+
+=cut
+
+sub editFile
+{
+    my ($file) = (@_);
+
+    #
+    #  Open the editor
+    #
+    my $editor = $CONFIG{ 'editor' } || $ENV{ 'EDITOR' } || "vim";
+    system( $editor, $file );
+
+}
+
+
+=begin doc
+
+Remove the "# milli: " prefix from the given file.
+
+=end doc
+
+=cut
+
+sub removeMilli
+{
+    my ($file) = (@_);
+
+    my @lines;
+
+    #
+    #  Open the source file for reading.
+    #
+    open( FILE, "<", $file ) or
+      die "Failed to open $file - $!";
+
+    #
+    #  Read it, and store the contents away.
+    #
+    while ( my $line = <FILE> )
+    {
+        push( @lines, $line );
+    }
+    close(FILE);
+
+
+    #
+    #  Open the file for writing.
+    #
+    open( NEW, ">", $file ) or
+      die "Failed to open $file - $!";
+
+    #
+    #  Write the contents, removing any lines matching our marker-pattern
+    #
+    foreach my $line (@lines)
+    {
+        next if ( $line =~ /^# milli:/ );
+        print NEW $line;
+    }
+    close(NEW);
+
+}
+
+
+
+=begin doc
+
+Get the data for a given bug, either by number of UID.
+
+=end doc
+
+=cut
+
+sub getBugByUIDORNumber
+{
+    my ($arg) = (@_);
+
+    #
+    #  Get all bugs.
+    #
+    my $bugs = getBugs();
+    my $bug;
+
+    #
+    #  For each one.
+    #
+    foreach my $possible (@$bugs)
+    {
+
+        #
+        # If the argument was NNNN then look for that bug number.
+        #
+        if ( $arg =~ /^([0-9]+)$/i )
+        {
+            $bug = $possible if ( $1 == $possible->{ 'number' } );
+        }
+        else
+        {
+
+            #
+            #  Otherwise look for it by UID
+            #
+            $bug = $possible if ( lc($arg) eq lc( $possible->{ 'uid' } ) );
+        }
+
+        return $bug if ( defined($bug) );
+    }
+
+    if ( !defined($bug) )
+    {
+        print "Bug not found: $arg\n";
+        exit 1;
+    }
+
+}
