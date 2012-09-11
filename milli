@@ -1037,7 +1037,7 @@ sub cmd_reopen
 =begin doc
 
 Change the statues of an existing bug.  Valid statuses are
-"opened" and "closed".
+"open" and "closed".
 
 =end doc
 
@@ -1050,7 +1050,7 @@ sub changeBugState
     #
     #  Ensure the status is valid.
     #
-    die "Invalid status $state" unless ( $state =~ /^(opened|closed)$/i );
+    die "Invalid status $state" unless ( $state =~ /^(open|closed)$/i );
 
 
     #
