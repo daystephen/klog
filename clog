@@ -50,6 +50,7 @@ use Digest::Perl::MD5 'md5_hex';
 #  Configuration options
 #
 my %CONFIG;
+my $executionDate;
 
 #
 #  Parse any command line options.
@@ -301,7 +302,7 @@ sub cmd_add
     my $uid  = randomUID();
     my $file = ".clog/$uid.clog";
 
-    my $date = scalar localtime;
+    my $date = date();
 
     #
     #  Write our template to it
@@ -556,7 +557,7 @@ sub cmd_search
         #
         #  Otherwise show a summary of the bug.
         #
-        print sprintf "N:%004d [%6s] %s", $b_number, $b_status, $b_title . "\n";
+        print sprintf "#%d %s [%6s] %s", $b_number, $b_uid, $b_status, $b_title . "\n";
     }
 }
 
@@ -652,7 +653,7 @@ sub cmd_append
       die "Failed to open file $bug->{'file'} for appending: $!";
 
 
-    my $date = scalar localtime;
+    my $date = date();
 
     #
     #  If we were given a message add it, otherwise spawn the editor.
@@ -834,7 +835,13 @@ sub cmd_reopen
 
 sub date
 {
-    return sprintf "%d-%02d-%02d_%02d-%02d-%02d", map { $$_[5]+1900, $$_[4]+1, $$_[3], $$_[2], $$_[1], $$_[0] } [localtime];
+
+    if(!$executionDate){
+      my ( $time, $microseconds ) = gettimeofday;
+      $executionDate = sprintf "%d-%02d-%02d_%02d-%02d-%02d.$microseconds", map { $$_[5]+1900, $$_[4]+1, $$_[3], $$_[2], $$_[1], $$_[0] } [localtime];      
+    }
+
+    return $executionDate;
 }
 
 # 
@@ -877,7 +884,7 @@ sub changeBugState
     #
     #  Now write out the new status section.
     #
-    my $date = scalar localtime;
+    my $date = date();
     print NEW <<EOF;
 
 Modified: $date
@@ -946,23 +953,15 @@ sub randomUID
 {
 
     #
-    #  Get the time.
-    #
-    my ( $time, $microseconds ) = gettimeofday;
-    $time = ( $time =~ m/(\d+)/ )[0];
-    $microseconds =~ s/\D//g;
-
-    #
     #  The values that feed into the filename.
     #
-    my $hostname = findHostname();
     my $email = `git config --get user.email`;
     chomp $email;
-    my $namespace = md5_hex($email);
-    $namespace =~ s/(.{6}).+/$1/;
-    my $file     = join ".", date(), $microseconds, $namespace;
+    my $uid = join ".", date(), $email;
+    $uid = md5_hex($uid);
+    $uid =~ s/(.{4}).+/$1/;
 
-    return ($file);
+    return ($uid);
 }
 
 # 
