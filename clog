@@ -425,7 +425,7 @@ sub cmd_add
     #  Make a "random" filename, with the same UID as the content.s
     #
     my $uid  = randomUID();
-    my $file = ".clog/$uid.clog";
+    my $file = ".clog/".date().".$uid.log";
 
     my $date = date();
 
@@ -698,7 +698,7 @@ sub cmd_search
         #
         #  Otherwise show a summary of the bug.
         #
-        print sprintf "#%d %s [%6s] %s", $b_number, $b_uid, $b_status, $b_title . "\n";
+        print sprintf "#%d %s [%6s] [%6s] %s", $b_number, $b_uid, $b_status, $b_type, $b_title . "\n";
     }
 }
 
@@ -1027,7 +1027,7 @@ sub date
 
     if(!$executionDate){
       my ( $time, $microseconds ) = gettimeofday;
-      $executionDate = sprintf "%d-%02d-%02d_%02d-%02d-%02d.$microseconds", map { $$_[5]+1900, $$_[4]+1, $$_[3], $$_[2], $$_[1], $$_[0] } [localtime];      
+      $executionDate = sprintf "%d-%02d-%02d_%02d-%02d-%02d.%06d", map { $$_[5]+1900, $$_[4]+1, $$_[3], $$_[2], $$_[1], $$_[0], $microseconds } [localtime];      
     }
 
     return $executionDate;
@@ -1164,7 +1164,7 @@ sub getBugs
     my $results;
     my $number = 0;
 
-    foreach my $file ( sort( glob(".clog/*.clog") ) )
+    foreach my $file ( sort( glob(".clog/*.$ext") ) )
     {
         $number += 1;
 
