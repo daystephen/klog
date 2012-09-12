@@ -32,11 +32,11 @@
 
 ##### ABOUT
 # 
-# milli is an intentionally simple system which allows bugs to be stored
+# clog is an intentionally simple system which allows bugs to be stored
 # inside projects, and merged in along with all other changes in exactly the
 # way that a user of a distributed revision control system would expect.
 # 
-# In short a project will have any and all bugs stored beneath the B<.milli>
+# In short a project will have any and all bugs stored beneath the B<.clog>
 # directory.  These bugs will be stored in random, but hostname-sepcific,
 # filename such that multiple people merging and commiting will be unlikely
 # to ever see conflicts.
@@ -54,7 +54,7 @@
 
 ##### USING IT
 # 
-# Usage of milli is divided into several distinct cases:
+# Usage of clog is divided into several distinct cases:
 # 
 #   * Initialising a new project.
 #   * Adding a bug.
@@ -75,18 +75,18 @@
 # 
 ## example begin
 # 
-#    milli init
+#    clog init
 # 
 ## example end
 # 
-# Once you've initialised your milli database you will need to ensure that
-# you add the B<.milli> database to your revision control system.
+# Once you've initialised your clog database you will need to ensure that
+# you add the B<.clog> database to your revision control system.
 # 
 # To add a new bug, optionally specifying a title for it, please run:
 # 
 ## example begin
 # 
-#    milli add This is my bug title
+#    clog add This is my bug title
 # 
 ## example end
 # 
@@ -97,7 +97,7 @@
 # variable, and will otherwise default to B<vim>.
 # 
 # Once a bug report has been created you should find that it is visible in the
-# output of "milli list" or "milli open".  In both cases you'll see output which
+# output of "clog list" or "clog open".  In both cases you'll see output which
 # looks something like this:
 # 
 ## example begin
@@ -117,7 +117,7 @@
 # 
 ## example begin
 # 
-#   milli append 3
+#   clog append 3
 # 
 ## example end
 # 
@@ -125,7 +125,7 @@
 # 
 ## example begin
 # 
-#   milli close 3
+#   clog close 3
 # 
 ## example end
 # 
@@ -138,7 +138,7 @@
 
 ##### BUG FILE FORMAT
 # 
-# Internally each bug is stored in a file, beneath the B<.milli> directory.
+# Internally each bug is stored in a file, beneath the B<.clog> directory.
 # 
 # Each bug file has a random name which is designed to avoid potential collisions
 # if a repository is shared between many users, upon different systems, as is
@@ -159,7 +159,7 @@
 ## example end
 # 
 # The UID is essentially random, but should be unique, and is the portable
-# sane way to refer to bugs.  When running B<milli list> you'll see a number
+# sane way to refer to bugs.  When running B<clog list> you'll see a number
 # reported next to each bug, but this number is valid only for the local system
 # and may change when new bugs are reported.
 # 
@@ -170,7 +170,7 @@
 # 
 ## example begin
 # 
-#   milli view 1270024997.P15442M277230.birthday.my.flat
+#   clog view 1270024997.P15442M277230.birthday.my.flat
 # 
 ## example end
 # 
@@ -179,11 +179,11 @@
 ##### CUSTOMIZATION
 # 
 # The template which is presented to the user when they report a new bug
-# may be replaced.  If the file ".milli/new-bug-template" is present the
+# may be replaced.  If the file ".clog/new-bug-template" is present the
 # contents of that file will be inserted in new reports, rather than the
 # default message.
 # 
-# If the file B<.milli/hook> exists, and is executable, it will be invoked
+# If the file B<.clog/hook> exists, and is executable, it will be invoked
 # when new bugs are added, bugs are closed, or comments are updated.
 # 
 # The hook will be invoked with two arguments, the first will be a string
@@ -421,7 +421,29 @@ sub parseCommandLineArguments
 
 sub usage
 {
-    pod2usage(1);
+  print <<END;
+
+clog [options] sub-command [args]
+
+  available sub-commands:
+
+    add                 - Add a new bug.
+    append              - Append text to an existing bug.
+    close               - Change an open bug to closed.
+    closed              - List all currently closed bugs.
+    edit                - Allow a bug to be edited.
+    init                - Initialise the system.
+    list|search         - Display existing bugs.
+    open                - List all currently open bugs.
+    reopen              - Change a closed bug to open.
+    view                - Show all details about a specific bug.
+
+  Options:
+    --editor            - Specify which editor to use.
+    --message           - Use the given message rather than spawning an editor.
+    --state             - Restrict matches when searching.
+
+END
     exit 1;
 }
 
@@ -433,21 +455,21 @@ sub usage
 
 
 # 
-# Inititalise a new .milli directory.
+# Inititalise a new .clog directory.
 # 
 # 
 #####
 
 sub cmd_init
 {
-    if ( !-d ".milli" )
+    if ( !-d ".clog" )
     {
-        mkpath( ".milli", { verbose => 0 } );
+        mkpath( ".clog", { verbose => 0 } );
         exit 0;
     }
     else
     {
-        print "There is already a .milli/ directory present here.\n";
+        print "There is already a .clog/ directory present here.\n";
         exit 1;
     }
 }
@@ -477,7 +499,7 @@ sub cmd_add
     #  Make a "random" filename, with the same UID as the content.s
     #
     my $uid  = randomUID();
-    my $file = ".milli/$uid.milli";
+    my $file = ".clog/$uid.clog";
 
     my $date = scalar localtime;
 
@@ -507,9 +529,9 @@ EOF
     }
 
 
-    if ( -e ".milli/new-bug-template" )
+    if ( -e ".clog/new-bug-template" )
     {
-        open( TMP, "<", ".milli/new-bug-template" ) or
+        open( TMP, "<", ".clog/new-bug-template" ) or
           die "Failed to open file $!";
         while ( my $line = <TMP> )
         {
@@ -524,13 +546,13 @@ EOF
         #  Otherwise add the default text, and show it in an editor.
         #
         print FILE<<EOF;
-# milli:
-# milli:  Enter your bug report here; it is better to write too much than
-# milli: too little.
-# milli:
-# milli:  Lines beginning with "# milli:" will be ignored, and removed,
-# milli: this file is saved.
-# milli:
+# clog:
+# clog:  Enter your bug report here; it is better to write too much than
+# clog: too little.
+# clog:
+# clog:  Lines beginning with "# clog:" will be ignored, and removed,
+# clog: this file is saved.
+# clog:
 
 EOF
         close(FILE);
@@ -543,16 +565,16 @@ EOF
     editFile($file);
 
     #
-    #  Once it was saved remove the lines that mention "# milli: "
+    #  Once it was saved remove the lines that mention "# clog: "
     #
-    removeMilli($file);
+    removeClog($file);
 
     #
     #  If there is a hook, run it.
     #
-    if ( -x ".milli/hook" )
+    if ( -x ".clog/hook" )
     {
-        system( ".milli/hook", "add", $file );
+        system( ".clog/hook", "add", $file );
     }
 }
 
@@ -653,7 +675,7 @@ EOT
 
     print <<EOF;
  <hr />
- <p style="text-align:right;">Produced by <a href="http://steve.org.uk/Software/milli/">milli</a>.</p>
+ <p style="text-align:right;">Produced by <a href="http://steve.org.uk/Software/clog/">clog</a>.</p>
  </body>
 </html>
 EOF
@@ -769,7 +791,7 @@ sub cmd_edit
         print
           "You must specify a bug to edit, either by the UID, or via the number.\n";
         print "\nFor example to edit bug number 3 you'd run:\n";
-        print "\tmilli edit 3\n\n";
+        print "\tclog edit 3\n\n";
         exit 1;
     }
 
@@ -786,9 +808,9 @@ sub cmd_edit
     #
     #  If there is a hook, run it.
     #
-    if ( -x ".milli/hook" )
+    if ( -x ".clog/hook" )
     {
-        system( ".milli/hook", "edit", $bug->{ 'file' } );
+        system( ".clog/hook", "edit", $bug->{ 'file' } );
     }
 }
 
@@ -822,7 +844,7 @@ sub cmd_append
         print
           "You must specify a bug to append to, either by the UID, or via the number.\n";
         print "\nFor example to append text to bug number 3 you'd run:\n";
-        print "\tmilli append 3\n\n";
+        print "\tclog append 3\n\n";
         exit 1;
     }
 
@@ -859,13 +881,13 @@ sub cmd_append
 
 Modified: $date
 
-# milli:
-# milli:  Enter your bug update here; it is better to write too much than
-# milli: too little.
-# milli:
-# milli:  Lines beginning with "# milli:" will be ignored, and removed, once
-# milli: this file is saved.
-# milli:
+# clog:
+# clog:  Enter your bug update here; it is better to write too much than
+# clog: too little.
+# clog:
+# clog:  Lines beginning with "# clog:" will be ignored, and removed, once
+# clog: this file is saved.
+# clog:
 EOF
     close(NEW);
 
@@ -876,16 +898,16 @@ EOF
     editFile( $bug->{ 'file' } );
 
     #
-    #  Once it was saved remove the lines that mention "# milli: "
+    #  Once it was saved remove the lines that mention "# clog: "
     #
-    removeMilli( $bug->{ 'file' } );
+    removeClog( $bug->{ 'file' } );
 
     #
     #  If there is a hook, run it.
     #
-    if ( -x ".milli/hook" )
+    if ( -x ".clog/hook" )
     {
-        system( ".milli/hook", "append", $bug->{ 'file' } );
+        system( ".clog/hook", "append", $bug->{ 'file' } );
     }
 
 }
@@ -916,7 +938,7 @@ sub cmd_view
         print
           "You must specify a bug to view, either by the UID, or via the number.\n";
         print "\nFor example to view bug number 3 you'd run:\n";
-        print "\tmilli view 3\n\n";
+        print "\tclog view 3\n\n";
         exit 1;
     }
 
@@ -963,7 +985,7 @@ sub cmd_close
         print
           "You must specify a bug to close, either by the UID, or via the number.\n";
         print "\nFor example to close bug number 3 you'd run:\n";
-        print "\tmilli close 3\n\n";
+        print "\tclog close 3\n\n";
         exit 1;
     }
 
@@ -994,7 +1016,7 @@ sub cmd_reopen
         print
           "You must specify a bug to reopen, either by the UID, or via the number.\n";
         print "\nFor example to reopen bug number 3 you'd run:\n";
-        print "\tmilli reopen 3\n\n";
+        print "\tclog reopen 3\n\n";
         exit 1;
     }
 
@@ -1065,9 +1087,9 @@ EOF
     #
     #  If there is a hook, run it.
     #
-    if ( -x ".milli/hook" )
+    if ( -x ".clog/hook" )
     {
-        system( ".milli/hook", $state, $bug->{ 'file' } );
+        system( ".clog/hook", $state, $bug->{ 'file' } );
     }
 }
 
@@ -1154,7 +1176,7 @@ sub getBugs
     my $results;
     my $number = 0;
 
-    foreach my $file ( sort( glob(".milli/*.milli") ) )
+    foreach my $file ( sort( glob(".clog/*.clog") ) )
     {
         $number += 1;
 
@@ -1226,12 +1248,12 @@ sub editFile
 
 
 # 
-# Remove the "# milli: " prefix from the given file.
+# Remove the "# clog: " prefix from the given file.
 # 
 # 
 #####
 
-sub removeMilli
+sub removeClog
 {
     my ($file) = (@_);
 
@@ -1264,7 +1286,7 @@ sub removeMilli
     #
     foreach my $line (@lines)
     {
-        next if ( $line =~ /^# milli:/ );
+        next if ( $line =~ /^# clog:/ );
         print NEW $line;
     }
     close(NEW);
