@@ -1,0 +1,7 @@
+UID: 96ba
+Type: feature
+Title: messages input unquoted
+Added: 2012-09-12_08-20-45.311905
+Status: open
+
+after the -m flag, all arguments should be appended to message, not title
