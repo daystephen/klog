@@ -1,0 +1,108 @@
+base = '/website-clear/clog/'
+!!! 5
+html
+  head
+    block head
+      title clog : distributed issue tracking and work log
+      :coffeescript
+        1
+      :stylus
+        body
+          font-family verdana, sans-serif
+          margin 0
+        #all
+          margin auto
+          width 960px
+        h2.title
+          color (red / 1.5)
+          &:first-letter
+            color (silver / 2.2)
+        .silver
+          color (silver / 2.2)
+        h1, h2, h3, h4, h5 ,h6
+          clear both
+        ul#downloads
+          padding 0
+        #downloads li
+          float left
+          list-style-type none
+
+      link(rel='stylesheet',type='text/css',href='css/google-buttons.css')
+
+      script(src='#{base}js/jquery.js')
+
+      script(src='#{base}js/codemirror/lib/codemirror.js')
+      link(rel='stylesheet',href='#{base}js/codemirror/lib/codemirror.css')
+      //- link(rel='stylesheet',href='#{base}js/codemirror/theme/ambiance.css')
+      link(rel='stylesheet',href='#{base}js/codemirror/theme/twilight-zone.css')
+      // script(src='#{base}js/codemirror/mode/xml/xml.js')
+      // script(src='#{base}js/codemirror/mode/javascript/javascript.js')
+      // script(src='#{base}js/codemirror/mode/css/css.js')
+      // script(src='#{base}js/codemirror/mode/htmlmixed/htmlmixed.js')
+
+  body
+    #all
+      #banner: img(src='clog-banner.jpg')
+      h2.title clog 
+        span.silver helps you keep track of your projects
+
+      p clog is designed to be a districuted issue tracking and time management tool. As such, it should integrate with any distributed version control system. I use git, but clog is vcs agnostic - just track the files along with your code!
+
+      h3 Get the code!
+
+      ul#downloads
+        li: View the Project on 
+          a(href="https://github.com/billymoon/clog").button.blue GitHub : billymoon/clog
+        li: a(href="https://github.com/billymoon/clog/zipball/master").button Download ZIP File
+        li: a(href="https://github.com/billymoon/clog/tarball/master").button Download TAR Ball
+        //- li: a(href="https://github.com/billymoon/clog").button View On GitHub
+
+      h3 Installation
+
+      p currently clog is available as a perl script, which you can download and either package with your project (to ensure all members can use it), or install on your system.
+
+      p.silver: i we are planning to port it to nodejs soon, so it will be available via npm.
+
+      :code
+        $ wget http://clog.github.com/clog
+        $ ln -s ~/clog/clog /usr/local/bin
+      h3 Basic usage
+
+      p clog is designed to make your issue tracking easier by having a simple command line interface
+
+      p.silver: i we are planning to implement a web interface soon!
+
+      :code
+        $ clog init
+        
+        $ clog add IE6 not rendering page correctly -m "ie6 needs special treatment to render the page correctly"
+        
+        $ clog list
+        #1   a6a0 [open]   [bug]     IE6 not rendering page correctly
+
+        $ clog view a6a0
+        UID: a6a0
+        Type: bug
+        Title: IE6 not rendering page correctly
+        Added: 2012-09-12_22-09-13.966296
+        Status: open
+
+        ie6 needs special treatment to render the page correctly
+        
+        $ 
+      h3 Issue tracking
+      h3 time management (work log)
+      :code
+        this is coded
+      #foot
+        block foot
+          p.silver: i this project is very much in it's early stages and should be considered a development project, not yet fit for production.
+
+    :coffeescript
+      $ ->
+        editor = []
+        for i in $('textarea.code')
+          editor.push CodeMirror.fromTextArea i,
+            mode: 'text/plain',
+            tabMode: 'indent',
+            theme: 'twilight-zone',

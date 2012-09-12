@@ -1,0 +1,29 @@
+button(color)
+  &.button:hover
+
+  .button.dark
+    background-color baseColor
+    background-image -webkit-linear-gradient(top,baseColor,baseColor*.8)
+    background-image -moz-linear-gradient(top,baseColor,baseColor*.8)
+    background-image -ms-linear-gradient(top,baseColor,baseColor*.8)
+    background-image -o-linear-gradient(top,baseColor,baseColor*.8)
+    background-image linear-gradient(top,baseColor,baseColor*.8)
+
+    border 1px solid baseColor*.8
+    color white
+
+  .button.darkhover
+    color white
+    border 1px solid baseColor*.75
+    
+    background-color baseColor
+    background-image -webkit-linear-gradient(top,baseColor,baseColor*.75)
+    background-image -moz-linear-gradient(top,baseColor,baseColor*.75)
+    background-image -ms-linear-gradient(top,baseColor,baseColor*.75)
+    background-image -o-linear-gradient(top,baseColor,baseColor*.75)
+    background-image linear-gradient(top,baseColor,baseColor*.75)
+    
+    -webkit-box-shadow 0 1px 1px rgba(0,0,0,.1)
+    -moz-box-shadow 0 1px 1px rgba(0,0,0,.1)
+    box-shadow 0 1px 1px rgba(0,0,0,.1)
+
