@@ -11,9 +11,7 @@
 ##### DERIVED FROM
 # 
 #  milli
-# 
 #   by
-# 
 #  Steve
 #  --
 #  http://www.steve.org.uk/
@@ -31,13 +29,11 @@
 # 
 #####
 
-
 #
 #  Pragmas
 #
 use strict;
 use warnings;
-
 
 #
 #  Modules
@@ -47,18 +43,15 @@ use Getopt::Long;
 use Pod::Usage;
 use Time::HiRes qw(gettimeofday);
 
-
 #
 #  Configuration options
 #
 my %CONFIG;
 
-
 #
 #  Parse any command line options.
 #
 parseCommandLineArguments();
-
 
 #
 #  Ensure we received an argument.
@@ -68,7 +61,6 @@ if ( !defined($cmd) )
 {
     usage();
 }
-
 
 #
 #  Decide what to do, based upon the command given.
@@ -180,9 +172,6 @@ else
 }
 
 exit 0;
-
-
-
 
 # 
 # Parse the command line options.
@@ -388,8 +377,6 @@ EOF
     }
 }
 
-
-
 # 
 # Output a HTML page for the bugs.
 # 
@@ -491,8 +478,6 @@ EOT
 EOF
 }
 
-
-
 # 
 # Search the existing bugs.
 # 
@@ -574,8 +559,6 @@ sub cmd_search
     }
 }
 
-
-
 # 
 # Allow a bug to be updated.
 # 
@@ -623,8 +606,6 @@ sub cmd_edit
         system( ".clog/hook", "edit", $bug->{ 'file' } );
     }
 }
-
-
 
 # 
 # Open an editor with a new block appended to the end of the file.
@@ -701,7 +682,6 @@ Modified: $date
 EOF
     close(NEW);
 
-
     #
     #  Allow the user to make the edits.
     #
@@ -721,7 +701,6 @@ EOF
     }
 
 }
-
 
 # 
 # View a specific bug.
@@ -802,7 +781,6 @@ sub cmd_close
     changeBugState( $value, "closed" );
 }
 
-
 # 
 # Reopen a bug.
 # 
@@ -834,15 +812,10 @@ sub cmd_reopen
 
 }
 
-
-
-
 ###
 ###  Utility functions.
 ###
 #############################################################################
-
-
 
 # 
 # Change the statues of an existing bug.  Valid statuses are
@@ -903,8 +876,6 @@ EOF
     }
 }
 
-
-
 # 
 # Attempt to discover the hostname of the current system.
 # 
@@ -940,8 +911,6 @@ sub findHostname
     return ("unknown.system");
 }
 
-
-
 # 
 # Generate a system UID.  This should be created with the hostname and
 # time included, such that collisions when running upon multiple systems
@@ -972,8 +941,6 @@ sub randomUID
 
     return ($file);
 }
-
-
 
 # 
 # Find and return an array of hashes, one for each existing bug.
@@ -1102,8 +1069,6 @@ sub removeClog
     close(NEW);
 
 }
-
-
 
 # 
 # Get the data for a given bug, either by number of UID.
