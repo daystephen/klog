@@ -225,7 +225,7 @@ sub usage
 
 clog [options] sub-command [args]
 
-  available sub-commands:
+  Available sub-commands:
 
     add                 - Add a new bug.
     append              - Append text to an existing bug.
@@ -239,9 +239,9 @@ clog [options] sub-command [args]
     view                - Show all details about a specific bug.
 
   Options:
-    --editor            - Specify which editor to use.
-    --message           - Use the given message rather than spawning an editor.
-    --state             - Restrict matches when searching.
+    -e, --editor        - Specify which editor to use.
+    -m, --message       - Use the given message rather than spawning an editor.
+    -s, --state         - Restrict matches when searching.
 
 END
     exit 1;
