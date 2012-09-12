@@ -194,15 +194,14 @@ sub parseCommandLineArguments
 
             # Help options
             "help",    \$HELP,
-            "verbose", \$CONFIG{ 'verbose' },
+            "verbose", \$CONFIG{ 'verbose' }, # only used when creating init directory
 
             # Editor & message.
             "editor=s",  \$CONFIG{ 'editor' },
             "message=s", \$CONFIG{ 'message' },
 
             # state, used for search/list, status is a synonym
-            "state=s",  \$CONFIG{ 'state' },
-            "status=s", \$CONFIG{ 'state' },
+            "state=s",  \$CONFIG{ 'state' }
         ) )
     {
         exit;
@@ -730,6 +729,13 @@ sub cmd_view
           "You must specify a bug to view, either by the UID, or via the number.\n";
         print "\nFor example to view bug number 3 you'd run:\n";
         print "\tclog view 3\n\n";
+
+        print "Maybe a list of open bugs will help you:\n\n";
+
+        cmd_search();
+
+        print "\n";
+
         exit 1;
     }
 
