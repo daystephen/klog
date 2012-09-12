@@ -698,7 +698,56 @@ sub cmd_search
         #
         #  Otherwise show a summary of the bug.
         #
-        print sprintf "#%d %s [%6s] [%6s] %s", $b_number, $b_uid, $b_status, $b_type, $b_title . "\n";
+
+        # Action                Parameters
+        # Set background color: tput setab color
+        # Set foreground color: tput setaf color
+        # Set bold mode:        tput bold
+        # Set half-bright mode: tput dim
+        # Set underline mode:   tput smul
+        # Exit underline mode:  tput rmul
+        # Reverse mode:         tput rev
+        # Set standout mode:    tput smso
+        # Exit standout mode:   tput rmso
+        # Reset all attributes: tput sgr0 
+        # 
+        # Color Code
+        # black   0
+        # red     1
+        # green   2
+        # yellow  3
+        # blue    4
+        # purple  5
+        # cyan    6
+        # white   7
+
+        my $Black=`tput setaf 0`;
+        my $BlackBG=`tput setab 0`;
+        my $DarkGrey=`tput bold ; tput setaf 0`;
+        my $LightGrey=`tput setaf 7`;
+        my $LightGreyBG=`tput setab 7`;
+        my $White=`tput bold ; tput setaf 7`;
+        my $Red=`tput setaf 1`;
+        my $RedBG=`tput setab 1`;
+        my $LightRed=`tput bold ; tput setaf 1`;
+        my $Green=`tput setaf 2`;
+        my $GreenBG=`tput setab 2`;
+        my $LightGreen=`tput bold ; tput setaf 2`;
+        my $Brown=`tput setaf 3`;
+        my $BrownBG=`tput setab 3`;
+        my $Yellow=`tput bold ; tput setaf 3`;
+        my $Blue=`tput setaf 4`;
+        my $BlueBG=`tput setab 4`;
+        my $LightBlue=`tput bold ; tput setaf 4`;
+        my $Purple=`tput setaf 5`;
+        my $PurpleBG=`tput setab 5`;
+        my $Pink=`tput bold ; tput setaf 5`;
+        my $Cyan=`tput setaf 6`;
+        my $CyanBG=`tput setab 6`;
+        my $LightCyan=`tput bold ; tput setaf 6`;
+        my $Reset=`tput sgr0`; # No Color;
+
+        print sprintf "#$Yellow%d $Reset$Green %s $Reset [$LightGreen%6s$Reset] [$Pink%6s$Reset] %s", $b_number, $b_uid, $b_status, $b_type, $b_title . "\n";
     }
 }
 
