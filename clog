@@ -658,7 +658,7 @@ sub cmd_append
     #
     if ( $CONFIG{ 'message' } )
     {
-        print NEW "\nModified:$date\n";
+        print NEW "\nModified: $date\n";
         print NEW $CONFIG{ 'message' };
         print NEW "\n";
         close(NEW);
