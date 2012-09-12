@@ -2,31 +2,7 @@
 
 ##### NAME
 # 
-# milli - A simple distributed bug tracking system.
-# 
-#####
-
-##### SYNOPSIS
-# 
-#  milli [options] sub-command [args]
-# 
-#   available sub-commands:
-# 
-#     add                 - Add a new bug.
-#     append              - Append text to an existing bug.
-#     close               - Change an open bug to closed.
-#     closed              - List all currently closed bugs.
-#     edit                - Allow a bug to be edited.
-#     init                - Initialise the system.
-#     list|search         - Display existing bugs.
-#     open                - List all currently open bugs.
-#     reopen              - Change a closed bug to open.
-#     view                - Show all details about a specific bug.
-# 
-#   Options:
-#     --editor            - Specify which editor to use.
-#     --message           - Use the given message rather than spawning an editor.
-#     --state             - Restrict matches when searching.
+# clog - A simple distributed bug tracking system.
 # 
 #####
 
