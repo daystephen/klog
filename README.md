@@ -1,14 +1,14 @@
 ## NAME
 
-clog - A simple distributed bug tracking system.
+klog - A simple distributed bug tracking system.
 
 ## ABOUT
 
-clog is an intentionally simple system which allows bugs to be stored
+klog is an intentionally simple system which allows bugs to be stored
 inside projects, and merged in along with all other changes in exactly the
 way that a user of a distributed revision control system would expect.
 
-In short a project will have any and all bugs stored beneath the **.clog**
+In short a project will have any and all bugs stored beneath the **.klog**
 directory.  These bugs will be stored in random, but hostname-sepcific,
 filename such that multiple people merging and commiting will be unlikely
 to ever see conflicts.
@@ -24,7 +24,7 @@ is a purely local convience.
 
 ## USING IT
 
-Usage of clog is divided into several distinct cases:
+Usage of klog is divided into several distinct cases:
 
 * Initialising a new project.
 * Adding a bug.
@@ -39,14 +39,14 @@ These actions all work in a consistent manner, to avoid unpleasant suprises.
 
 To initialise a bug database within your project run:
 
-    clog init
+    klog init
 
-Once you've initialised your clog database you will need to ensure that
-you add the **.clog** database to your revision control system.
+Once you've initialised your klog database you will need to ensure that
+you add the **.klog** database to your revision control system.
 
 To add a new bug, optionally specifying a title for it, please run:
 
-    clog add This is my bug title
+    klog add This is my bug title
 
 If no title is specified a bug report will be created with a default
 title.  This will open an editor for you to enter the bug report text.
@@ -55,7 +55,7 @@ The editer may be specified with the **--editor** flag, the EDITOR environmental
 variable, and will otherwise default to **vim**.
 
 Once a bug report has been created you should find that it is visible in the
-output of "clog list" or "clog open".  In both cases you'll see output which
+output of "klog list" or "klog open".  In both cases you'll see output which
 looks something like this:
 
     N:0001 [closed] testing me
@@ -69,11 +69,11 @@ Each of the operations that is specific to a single bug report will allow you
 to specify the number of the bug.  For example if you wished to update the
 last bug, to append some text to it, you could run:
 
-    clog append 3
+    klog append 3
 
 Similarly you could close the bug by running:
 
-    clog close 3
+    klog close 3
 
 Note that to close a bug you do not need to give a justification, or add
 any content.  A bug may go from freshly opened to closed with no need for
@@ -81,7 +81,7 @@ further updates.
 
 ## BUG FILE FORMAT
 
-Internally each bug is stored in a file, beneath the **.clog** directory.
+Internally each bug is stored in a file, beneath the **.klog** directory.
 
 Each bug file has a random name which is designed to avoid potential collisions
 if a repository is shared between many users, upon different systems, as is
@@ -98,7 +98,7 @@ example shows:
     I like pies, but I have none.
 
 The UID is essentially random, but should be unique, and is the portable
-sane way to refer to bugs.  When running **clog list** you'll see a number
+sane way to refer to bugs.  When running **klog list** you'll see a number
 reported next to each bug, but this number is valid only for the local system
 and may change when new bugs are reported.
 
@@ -107,16 +107,16 @@ operations providing you realise that the number associated with a specific
 bug will change over time.  By contrast the UID will never change, so you
 may always run a command like this:
 
-    clog view 1270024997.P15442M277230.birthday.my.flat
+    klog view 1270024997.P15442M277230.birthday.my.flat
 
 ## CUSTOMIZATION
 
 The template which is presented to the user when they report a new bug
-may be replaced.  If the file ".clog/new-bug-template" is present the
+may be replaced.  If the file ".klog/new-bug-template" is present the
 contents of that file will be inserted in new reports, rather than the
 default message.
 
-If the file **.clog/hook** exists, and is executable, it will be invoked
+If the file **.klog/hook** exists, and is executable, it will be invoked
 when new bugs are added, bugs are closed, or comments are updated.
 
 The hook will be invoked with two arguments, the first will be a string

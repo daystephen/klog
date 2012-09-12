@@ -346,7 +346,7 @@ sub usage
 
   print <<END;
 
-clog [options] sub-command [args]
+klog [options] sub-command [args]
 
   Available sub-commands:
 
@@ -379,21 +379,21 @@ END
 
 
 # 
-# Inititalise a new .clog directory.
+# Inititalise a new .klog directory.
 # 
 # 
 #####
 
 sub cmd_init
 {
-    if ( !-d ".clog" )
+    if ( !-d ".klog" )
     {
-        mkpath( ".clog", { verbose => 0 } );
+        mkpath( ".klog", { verbose => 0 } );
         exit 0;
     }
     else
     {
-        print "There is already a .clog/ directory present here.\n";
+        print "There is already a .klog/ directory present here.\n";
         exit 1;
     }
 }
@@ -425,7 +425,7 @@ sub cmd_add
     #  Make a "random" filename, with the same UID as the content.s
     #
     my $uid  = randomUID();
-    my $file = ".clog/".date().".$uid.log";
+    my $file = ".klog/".date().".$uid.log";
 
     my $date = date();
 
@@ -456,9 +456,9 @@ EOF
     }
 
 
-    if ( -e ".clog/new-bug-template" )
+    if ( -e ".klog/new-bug-template" )
     {
-        open( TMP, "<", ".clog/new-bug-template" ) or
+        open( TMP, "<", ".klog/new-bug-template" ) or
           die "Failed to open file $!";
         while ( my $line = <TMP> )
         {
@@ -473,13 +473,13 @@ EOF
         #  Otherwise add the default text, and show it in an editor.
         #
         print FILE<<EOF;
-# clog:
-# clog:  Enter your bug report here; it is better to write too much than
-# clog: too little.
-# clog:
-# clog:  Lines beginning with "# clog:" will be ignored, and removed,
-# clog: this file is saved.
-# clog:
+# klog:
+# klog:  Enter your bug report here; it is better to write too much than
+# klog: too little.
+# klog:
+# klog:  Lines beginning with "# klog:" will be ignored, and removed,
+# klog: this file is saved.
+# klog:
 
 EOF
         close(FILE);
@@ -492,16 +492,16 @@ EOF
     editFile($file);
 
     #
-    #  Once it was saved remove the lines that mention "# clog: "
+    #  Once it was saved remove the lines that mention "# klog: "
     #
     removeClog($file);
 
     #
     #  If there is a hook, run it.
     #
-    if ( -x ".clog/hook" )
+    if ( -x ".klog/hook" )
     {
-        system( ".clog/hook", "add", $file );
+        system( ".klog/hook", "add", $file );
     }
 }
 
@@ -600,7 +600,7 @@ EOT
 
     print <<EOF;
  <hr />
- <p style="text-align:right;">Produced by <a href="http://steve.org.uk/Software/clog/">clog</a>.</p>
+ <p style="text-align:right;">Produced by <a href="http://steve.org.uk/Software/klog/">klog</a>.</p>
  </body>
 </html>
 EOF
@@ -727,7 +727,7 @@ sub cmd_edit
         print
           "You must specify a bug to edit, either by the UID, or via the number.\n";
         print "\nFor example to edit bug number 3 you'd run:\n";
-        print "\tclog edit 3\n\n";
+        print "\tklog edit 3\n\n";
         exit 1;
     }
 
@@ -744,9 +744,9 @@ sub cmd_edit
     #
     #  If there is a hook, run it.
     #
-    if ( -x ".clog/hook" )
+    if ( -x ".klog/hook" )
     {
-        system( ".clog/hook", "edit", $bug->{ 'file' } );
+        system( ".klog/hook", "edit", $bug->{ 'file' } );
     }
 }
 
@@ -774,7 +774,7 @@ sub cmd_delete
         print
           "You must specify a bug to delete, either by the UID, or via the number.\n";
         print "\nFor example to delete bug number 3 you'd run:\n";
-        print "\tclog delete 3\n\n";
+        print "\tklog delete 3\n\n";
         exit 1;
     }
 
@@ -792,9 +792,9 @@ sub cmd_delete
     #
     #  If there is a hook, run it.
     #
-    if ( -x ".clog/hook" )
+    if ( -x ".klog/hook" )
     {
-        system( ".clog/hook", "delete", $bug->{ 'file' } );
+        system( ".klog/hook", "delete", $bug->{ 'file' } );
     }
 }
 
@@ -826,7 +826,7 @@ sub cmd_append
         print
           "You must specify a bug to append to, either by the UID, or via the number.\n";
         print "\nFor example to append text to bug number 3 you'd run:\n";
-        print "\tclog append 3\n\n";
+        print "\tklog append 3\n\n";
         exit 1;
     }
 
@@ -863,13 +863,13 @@ sub cmd_append
 
 Modified: $date
 
-# clog:
-# clog:  Enter your bug update here; it is better to write too much than
-# clog: too little.
-# clog:
-# clog:  Lines beginning with "# clog:" will be ignored, and removed, once
-# clog: this file is saved.
-# clog:
+# klog:
+# klog:  Enter your bug update here; it is better to write too much than
+# klog: too little.
+# klog:
+# klog:  Lines beginning with "# klog:" will be ignored, and removed, once
+# klog: this file is saved.
+# klog:
 EOF
     close(NEW);
 
@@ -879,16 +879,16 @@ EOF
     editFile( $bug->{ 'file' } );
 
     #
-    #  Once it was saved remove the lines that mention "# clog: "
+    #  Once it was saved remove the lines that mention "# klog: "
     #
     removeClog( $bug->{ 'file' } );
 
     #
     #  If there is a hook, run it.
     #
-    if ( -x ".clog/hook" )
+    if ( -x ".klog/hook" )
     {
-        system( ".clog/hook", "append", $bug->{ 'file' } );
+        system( ".klog/hook", "append", $bug->{ 'file' } );
     }
 
 }
@@ -918,7 +918,7 @@ sub cmd_view
         print
           "You must specify a bug to view, either by the UID, or via the number.\n";
         print "\nFor example to view bug number 3 you'd run:\n";
-        print "\tclog view 3\n\n";
+        print "\tklog view 3\n\n";
 
         print "Maybe a list of open bugs will help you:\n\n";
 
@@ -972,7 +972,7 @@ sub cmd_close
         print
           "You must specify a bug to close, either by the UID, or via the number.\n";
         print "\nFor example to close bug number 3 you'd run:\n";
-        print "\tclog close 3\n\n";
+        print "\tklog close 3\n\n";
         exit 1;
     }
 
@@ -1002,7 +1002,7 @@ sub cmd_reopen
         print
           "You must specify a bug to reopen, either by the UID, or via the number.\n";
         print "\nFor example to reopen bug number 3 you'd run:\n";
-        print "\tclog reopen 3\n\n";
+        print "\tklog reopen 3\n\n";
         exit 1;
     }
 
@@ -1086,9 +1086,9 @@ EOF
     #
     #  If there is a hook, run it.
     #
-    if ( -x ".clog/hook" )
+    if ( -x ".klog/hook" )
     {
-        system( ".clog/hook", $state, $bug->{ 'file' } );
+        system( ".klog/hook", $state, $bug->{ 'file' } );
     }
 }
 
@@ -1129,7 +1129,7 @@ sub getBugs
     my $results;
     my $number = 0;
 
-    foreach my $file ( sort( glob(".clog/*.$ext") ) )
+    foreach my $file ( sort( glob(".klog/*.$ext") ) )
     {
         $number += 1;
 
@@ -1208,7 +1208,7 @@ sub editFile
 
 
 # 
-# Remove the "# clog: " prefix from the given file.
+# Remove the "# klog: " prefix from the given file.
 # 
 # 
 #####
@@ -1246,7 +1246,7 @@ sub removeClog
     #
     foreach my $line (@lines)
     {
-        next if ( $line =~ /^# clog:/ );
+        next if ( $line =~ /^# klog:/ );
         print NEW $line;
     }
     close(NEW);
