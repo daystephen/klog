@@ -649,7 +649,7 @@ sub cmd_search
         #  Find basic meta-data.
         #
         my $b_title  = $bug->{ 'title' };
-        my $b_type  = $bug->{ 'type' };
+        my $b_type   = $bug->{ 'type' };
         my $b_status = $bug->{ 'status' };
         my $b_uid    = $bug->{ 'uid' };
         my $b_file   = $bug->{ 'file' };
@@ -698,7 +698,7 @@ sub cmd_search
         #
         #  Otherwise show a summary of the bug.
         #
-        print sprintf "#%d %s [%6s] [%6s] %s", $b_number, $b_uid, $b_status, $b_type, $b_title . "\n";
+        print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\n";
     }
 }
 
