@@ -635,6 +635,11 @@ sub cmd_search
     my $status = $CONFIG{ 'state' } || "all";
 
     #
+    #  The type of the bugs the user is interested in.
+    #
+    my $type = $CONFIG{ 'type' } || "all";
+
+    #
     #  For each bug
     #
     foreach my $bug (@$bugs)
