@@ -43,6 +43,9 @@ use Getopt::Long;
 use Pod::Usage;
 use Time::HiRes qw(gettimeofday);
 
+#  Custom Modules
+use Digest::Perl::MD5 'md5_hex';
+
 #
 #  Configuration options
 #
@@ -817,6 +820,18 @@ sub cmd_reopen
 ###
 #############################################################################
 
+#
+# return date in format
+#
+#    yyyy-mm-dd_hh-ii-ss
+#
+#####
+
+sub date
+{
+    return sprintf "%d-%02d-%02d_%02d-%02d-%02d", map { $$_[5]+1900, $$_[4]+1, $$_[3], $$_[2], $$_[1], $$_[0] } [localtime];
+}
+
 # 
 # Change the statues of an existing bug.  Valid statuses are
 # "open" and "closed".
@@ -936,8 +951,11 @@ sub randomUID
     #  The values that feed into the filename.
     #
     my $hostname = findHostname();
-    my $unique   = "P$$" . "M$microseconds";
-    my $file     = join ".", $hostname, $time, $unique;
+    my $email = `git config --get user.email`;
+    chomp $email;
+    my $namespace = md5_hex($email);
+    $namespace =~ s/(.{6}).+/$1/;
+    my $file     = join ".", date(), $microseconds, $namespace;
 
     return ($file);
 }
