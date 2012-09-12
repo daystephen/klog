@@ -1,0 +1,7 @@
+UID: 5c5a
+Type: feature
+Title: only edit messages and not header
+Added: 2012-09-12_14-36-47.296261
+Status: open
+
+when the editor opens, it should only show the message to be edited, so a simple select all will get you started. After editing, the header infor should be echoed to the console.

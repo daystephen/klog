@@ -1,0 +1,7 @@
+UID: c86c
+Type: feature
+Title: simple gui interface
+Added: 2012-09-12_08-51-31.842606
+Status: open
+
+it would be nice to have a gui - I am thinking a .hta file for windows, and probably a cocoa frame for osx. some kind of equivalent html frame for linux - possible titanium desktop if it must be, but that is a bit heavy for what we need here.

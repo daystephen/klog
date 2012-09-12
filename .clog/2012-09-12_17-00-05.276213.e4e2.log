@@ -1,0 +1,9 @@
+UID: e4e2
+Type: feature
+Title: allow comments on issues
+Added: 2012-09-12_17-00-05.276213
+Status: open
+
+comments should be part of the system, possibly allowing code, using markdown. comments shuld be listed in the search view, and should track who has seen them so that they can work like an unread count, and other people can see who has read the comments
+
+it should be easy to reference commit hashes from comments

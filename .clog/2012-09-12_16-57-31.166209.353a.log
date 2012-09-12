@@ -1,0 +1,7 @@
+UID: 353a
+Type: feature
+Title: add priority
+Added: 2012-09-12_16-57-31.166209
+Status: open
+
+bitbucket uses priority of trivial/minor/major/critical/blocker
