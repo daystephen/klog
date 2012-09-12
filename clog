@@ -1093,41 +1093,6 @@ EOF
 }
 
 # 
-# Attempt to discover the hostname of the current system.
-# 
-# 
-#####
-
-sub findHostname
-{
-
-    #
-    #  Run each of the following commands to find the hostname,
-    # return the first one that produces non-empty results.
-    #
-    foreach my $cmd ( "uname -n", "hostname", "cat /etc/hostname",
-                      "cat /etc/HOSTNAME" )
-    {
-
-        #
-        #  Run it.
-        #
-        my $out = `$cmd`;
-        if ( defined($out) )
-        {
-
-            #
-            #  If there were results.
-            #
-            chomp($out);
-            return $out if ( length($out) );
-        }
-    }
-
-    return ("unknown.system");
-}
-
-# 
 # Generate a system UID.  This should be created with the hostname and
 # time included, such that collisions when running upon multiple systems
 # are unlikely.
