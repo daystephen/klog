@@ -211,7 +211,7 @@ sub parseCommandLineArguments
     }
 
     usage() if $HELP;
-    pod2usage( -verbose => 2 ) if $MANUAL;
+
 }
 
 
@@ -223,6 +223,7 @@ sub parseCommandLineArguments
 
 sub usage
 {
+
   print <<END;
 
 clog [options] sub-command [args]
