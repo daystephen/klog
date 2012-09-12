@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><title>clog : distributed issue tracking and work log</title><script type="text/javascript">
+<!DOCTYPE html><html><head><title>klog : distributed issue tracking and work log</title><script type="text/javascript">
 (function() {
   1;
 
@@ -37,15 +37,16 @@ ul#downloads {
   float: left;
   list-style-type: none;
 }
-</style><link rel="stylesheet" type="text/css" href="css/google-buttons.css"><script src="/clog/js/jquery.js"></script><script src="/clog/js/codemirror/lib/codemirror.js"></script><link rel="stylesheet" href="/clog/js/codemirror/lib/codemirror.css"><link rel="stylesheet" href="/clog/js/codemirror/theme/twilight-zone.css"><!-- script(src='#{base}js/codemirror/mode/xml/xml.js')--><!-- script(src='#{base}js/codemirror/mode/javascript/javascript.js')--><!-- script(src='#{base}js/codemirror/mode/css/css.js')--><!-- script(src='#{base}js/codemirror/mode/htmlmixed/htmlmixed.js')--></head><body><div id="all"><div id="banner"><img src="clog-banner.jpg"></div><h2 class="title">clog <span class="silver">helps you keep track of your projects</span></h2><p>clog is designed to be a districuted issue tracking and time management tool. As such, it should integrate with any distributed version control system. I use git, but clog is vcs agnostic - just track the files along with your code!</p><h3>Get the code!</h3><ul id="downloads"><li><View>the Project on <a href="https://github.com/billymoon/clog" class="button blue">GitHub : billymoon/clog</a></View></li><li><a href="https://github.com/billymoon/clog/zipball/master" class="button">Download ZIP File</a></li><li><a href="https://github.com/billymoon/clog/tarball/master" class="button">Download TAR Ball</a></li></ul><h3>Installation</h3><p>currently clog is available as a perl script, which you can download and either package with your project (to ensure all members can use it), or install on your system.</p><p class="silver"><i>we are planning to port it to nodejs soon, so it will be available via npm.</i></p><textarea class='code'>$ wget http://clog.github.com/clog
-$ ln -s ~/clog/clog /usr/local/bin</textarea><h3>Basic usage</h3><p>clog is designed to make your issue tracking easier by having a simple command line interface</p><p class="silver"><i>we are planning to implement a web interface soon!</i></p><textarea class='code'>$ clog init
+</style><link rel="stylesheet" type="text/css" href="css/google-buttons.css"><script src="/clog/js/jquery.js"></script><script src="/clog/js/codemirror/lib/codemirror.js"></script><link rel="stylesheet" href="/clog/js/codemirror/lib/codemirror.css"><link rel="stylesheet" href="/clog/js/codemirror/theme/twilight-zone.css"><script src="/clog/js/codemirror/mode/shell/shell.js"></script><!-- script(src='#{base}js/codemirror/mode/xml/xml.js')--><!-- script(src='#{base}js/codemirror/mode/javascript/javascript.js')--><!-- script(src='#{base}js/codemirror/mode/css/css.js')--><!-- script(src='#{base}js/codemirror/mode/htmlmixed/htmlmixed.js')--></head><body><div id="all"><div id="banner"><a href="/clog/"><img src="klog-banner.jpg"></a></div><h2 class="title">klog <span class="silver">helps you to keep track of your projects</span></h2><p>klog is designed to be a districuted issue tracking and time management tool. as such, it should integrate with any distributed version control system. I use git, but klog is vcs agnostic - just track the files along with your code!</p><h3>Get the code!</h3><ul id="downloads"><li>view the project on <a href="https://github.com/billymoon/klog" class="button blue">GitHub : billymoon/klog</a></li><li><a href="https://github.com/billymoon/klog/zipball/master" class="button">Download ZIP File</a></li><li><a href="https://github.com/billymoon/klog/tarball/master" class="button">Download TAR Ball</a></li></ul><h3>Installation</h3><p>currently klog is available as a perl script, which you can download and either package with your project (to ensure all members can use it), or install on your system.</p><p class="silver"><i>we are planning to port it to nodejs soon, so it will be available via npm.</i></p><textarea class='code'>$ git clone https://github.com/billymoon/klog
 
-$ clog add IE6 not rendering page correctly -m "ie6 needs special treatment to render the page correctly"
+$ ln -s ~/path/to/klog /usr/local/bin</textarea><h3>Basic usage</h3><p>klog is designed to make your issue tracking easier by having a simple command line interface</p><p class="silver"><i>we are planning to implement a web interface soon!</i></p><textarea class='code'>$ klog init
 
-$ clog list
+$ klog add IE6 not rendering page correctly -m "ie6 needs special treatment to render the page correctly"
+
+$ klog list
 #1   a6a0 [open]   [bug]     IE6 not rendering page correctly
 
-$ clog view a6a0
+$ klog view a6a0
 UID: a6a0
 Type: bug
 Title: IE6 not rendering page correctly
@@ -54,7 +55,7 @@ Status: open
 
 ie6 needs special treatment to render the page correctly
 
-$ </textarea><h3>Issue tracking</h3><h3>time management (work log)</h3><textarea class='code'>this is coded</textarea><div id="foot"><p class="silver"><i>this project is very much in it's early stages and should be considered a development project, not yet fit for production.</i></p></div></div><script type="text/javascript">
+$ # business as usual</textarea><h3>Issue tracking</h3><p>files are stored as plain text files, witha  filename based on the exact time the issue was raised (millisecond precision) and the firstbits of a hash generated from the authors email address. these firstbits become the UID of the issue, preventing colision with other issues being raised by other developers at the same time.</p><p>by keeping all the issues with the git repo, it becomes a great offline tool for managing a project. any developer who has the repo, also has the tools needed to track progress, pick a task to work on, and read the rationale behind chages to the code. this feature is also great for archiving projects, with the confidence that all the related discussion and material is all in one place!</p><h3>Time management (work log)</h3><p>one issue that keeps coming up for me personally, is how to effectively track work activity, and time spent on a project. after trying out several solutions, from online log files, spreadsheets, and time tracking software, I ended up reverting to plain old time-stamped log files. after programming a hotkey to insert the date I would just write down when I started working, then each thing I did as a brief description line, and when I finished. this would constitute a `block` of work, and I would then calculate the time spent on each block. this system has been working great for me, but I could not help feeling it could be much better.</p><p>my current best idea, is to try to link the process of tracking issues, making commits, and managing time, as they are all very much integral to the work process. when I am working on a bug, I want that work to be related to a `block` that can be identified how long, and when it took place, and also the code and comments relating to the work. filling the gap here is what klog is all about.</p><div id="foot"><p class="silver"><i>this project is very much in it's early stages and should be considered a development project, not yet fit for production.</i></p></div></div><script type="text/javascript">
 (function() {
 
   $(function() {
@@ -65,7 +66,7 @@ $ </textarea><h3>Issue tracking</h3><h3>time management (work log)</h3><textarea
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       i = _ref[_i];
       _results.push(editor.push(CodeMirror.fromTextArea(i, {
-        mode: 'text/plain',
+        mode: 'shell',
         tabMode: 'indent',
         theme: 'twilight-zone'
       })));
