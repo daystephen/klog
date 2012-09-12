@@ -316,11 +316,14 @@ sub parseCommandLineArguments
             "help",    \$HELP,
             "verbose", \$CONFIG{ 'verbose' }, # only used when creating init directory
 
+            # Type of bug (feature / bug / task / etc...)
+            "type=s", \$CONFIG{ 'type' },
+
             # Editor & message.
             "editor=s",  \$CONFIG{ 'editor' },
             "message=s", \$CONFIG{ 'message' },
 
-            # state, used for search/list, status is a synonym
+            # state, used for search/list
             "state=s",  \$CONFIG{ 'state' }
         ) )
     {
@@ -415,6 +418,8 @@ sub cmd_add
 
     $title = "Untitled bug report" unless ( defined($title) );
 
+    my $type =  $CONFIG{ 'type'} || 'bug';
+
     #
     #  Make a "random" filename, with the same UID as the content.s
     #
@@ -428,8 +433,9 @@ sub cmd_add
     #
     open( FILE, ">", $file );
     print FILE<<EOF;
-Title: $title
 UID: $uid
+Type: $type
+Title: $title
 Added: $date
 Status: open
 
@@ -637,6 +643,7 @@ sub cmd_search
         #  Find basic meta-data.
         #
         my $b_title  = $bug->{ 'title' };
+        my $b_type  = $bug->{ 'type' };
         my $b_status = $bug->{ 'status' };
         my $b_uid    = $bug->{ 'uid' };
         my $b_file   = $bug->{ 'file' };
@@ -649,6 +656,15 @@ sub cmd_search
         if ( $status ne "all" )
         {
             next if ( lc($status) ne lc($b_status) );
+        }
+
+        #
+        #  If the user is being specific about status then
+        # skip ones that don't match, as this is cheap.
+        #
+        if ( $type ne "all" )
+        {
+            next if ( lc($type) ne lc($b_type) );
         }
 
         #
@@ -1100,6 +1116,7 @@ sub getBugs
 
         my $status;
         my $title;
+        my $type;
         my $uid;
         my $body;
 
@@ -1109,6 +1126,11 @@ sub getBugs
             if ( $line =~ /^Title: (.*)/ )
             {
                 $title = $1;
+            }
+         
+            if ( $line =~ /^Type: (.*)/ )
+            {
+                $type = $1;
             }
             elsif ( $line =~ /^(Added|Modified):(.*)/ )
             {
@@ -1137,6 +1159,7 @@ sub getBugs
                  number => $number,
                  uid    => $uid,
                  status => $status,
+                 type => $type,
                  title  => $title
               } );
     }
