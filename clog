@@ -1093,7 +1093,7 @@ sub randomUID
     my $email = `git config --get user.email`;
     chomp $email;
     my $uid = join ".", date(), $email;
-    $uid = md5_hex($uid);
+    $uid = md5($uid);
     $uid =~ s/(.{4}).+/$1/;
 
     return ($uid);
