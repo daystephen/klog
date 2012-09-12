@@ -355,6 +355,7 @@ clog [options] sub-command [args]
     close               - Change an open bug to closed.
     closed              - List all currently closed bugs.
     edit                - Allow a bug to be edited.
+    delete              - Allow a bug to be deleted.
     init                - Initialise the system.
     list|search         - Display existing bugs.
     open                - List all currently open bugs.
@@ -741,6 +742,54 @@ sub cmd_edit
     if ( -x ".clog/hook" )
     {
         system( ".clog/hook", "edit", $bug->{ 'file' } );
+    }
+}
+
+# 
+# Allow a bug to be deleted.
+# 
+# This mostly means:
+# 
+# 1.  find the file associated with a given bug.
+# 2.  delete that file.
+# 
+#####
+
+sub cmd_delete
+{
+    my (@args) = (@_);
+
+    my $value = join( "", @args );
+
+    #
+    #  Ensure we know what we're operating upon
+    #
+    if ( !length($value) )
+    {
+        print
+          "You must specify a bug to delete, either by the UID, or via the number.\n";
+        print "\nFor example to delete bug number 3 you'd run:\n";
+        print "\tclog delete 3\n\n";
+        exit 1;
+    }
+
+    #
+    #  Find the bug.
+    #
+    my $bug = getBugByUIDORNumber($value);
+
+    #
+    #  Delete the file the bug is stored in.
+    #
+    my $file = $bug->{ 'file' };
+    `rm $file`;
+
+    #
+    #  If there is a hook, run it.
+    #
+    if ( -x ".clog/hook" )
+    {
+        system( ".clog/hook", "delete", $bug->{ 'file' } );
     }
 }
 
