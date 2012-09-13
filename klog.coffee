@@ -33,7 +33,7 @@
 #  Modules
 #
 fs = require 'fs'
-args = require('optimist').argv
+argv = require('optimist').argv
 
 #  Constants
 opts =
@@ -52,7 +52,7 @@ opts =
 
 parseCommandLineArguments = ->
   HELP = 0
-  if args.help
+  if argv.help
     usage()
 ###  #
   #  Parse options.
@@ -111,7 +111,7 @@ usage = ->
       -s, --state         - Restrict matches when searching.
 
   '''
-  process.exit
+  process.exit()
 
 #
 #  Parse any command line options.
@@ -474,250 +474,151 @@ return MD5;
 
 })()`
 
-debug =
-  opts: opts
-  args: args
-  MD5: MD5
-console.log debug
+cmd_init = ->
+  console.log 'will init'
 
+cmd_add = (args) ->
+  console.log 'will add with ' + args
 
-old_code = """
+cmd_append = (args) ->
+  console.log 'will append with ' + args
 
+cmd_html = (args) ->
+  console.log 'will html with ' + args
 
-# use Digest::Perl::MD5 'md5_hex';
-use strict;
-use integer;
-use Exporter;
-use vars qw($VERSION @ISA @EXPORTER @EXPORT_OK);
+cmd_search = (args, state) ->
+  state ?= 'all'
+  console.log 'will search ('+state+') with ' + args
 
-@EXPORT_OK = qw(md5 md5_hex);
+cmd_view = (args) ->
+  console.log 'will view with ' + args
 
-@ISA = 'Exporter';
-$VERSION = '1.6';
+cmd_close = (args) ->
+  console.log 'will close with ' + args
 
-# I-Vektor
-sub A() { 0x67_45_23_01 }
-sub B() { 0xef_cd_ab_89 }
-sub C() { 0x98_ba_dc_fe }
-sub D() { 0x10_32_54_76 }
+cmd_reopen = (args) ->
+  console.log 'will reopen with ' + args
 
-# for internal use
-sub MAX() { 0xFFFFFFFF }
+cmd_edit = (args) ->
+  console.log 'will edit with ' + args
 
-# padd a message to a multiple of 64
-sub padding {
-    my $l = length (my $msg = shift() . chr(128));    
-    $msg .= "\0" x (($l%64<=56?56:120)-$l%64);
-    $l = ($l-1)*8;
-    $msg .= pack 'VV', $l & MAX , ($l >> 16 >> 16);
-}
+cmd_delete = (args) ->
+  console.log 'will delete with ' + args
 
-sub rotate_left($$) {
-  #$_[0] << $_[1] | $_[0] >> (32 - $_[1]);
-  #my $right = $_[0] >> (32 - $_[1]);
-  #my $rmask = (1 << $_[1]) - 1;
-  ($_[0] << $_[1]) | (( $_[0] >> (32 - $_[1])  )  & ((1 << $_[1]) - 1));
-  #$_[0] << $_[1] | (($_[0]>> (32 - $_[1])) & (1 << (32 - $_[1])) - 1);
-}
+cmd_init = (args) ->
+  console.log 'will init with ' + args
 
-sub gen_code {
-  # Discard upper 32 bits on 64 bit archs.
-  my $MSK = ((1 << 16) << 16) ? ' & ' . MAX : '';
-# FF => "X0=rotate_left(((X1&X2)|(~X1&X3))+X0+X4+X6$MSK,X5)+X1$MSK;",
-# GG => "X0=rotate_left(((X1&X3)|(X2&(~X3)))+X0+X4+X6$MSK,X5)+X1$MSK;",
-  my %f = (
-  FF => "X0=rotate_left((X3^(X1&(X2^X3)))+X0+X4+X6$MSK,X5)+X1$MSK;",
-  GG => "X0=rotate_left((X2^(X3&(X1^X2)))+X0+X4+X6$MSK,X5)+X1$MSK;",
-  HH => "X0=rotate_left((X1^X2^X3)+X0+X4+X6$MSK,X5)+X1$MSK;",
-  II => "X0=rotate_left((X2^(X1|(~X3)))+X0+X4+X6$MSK,X5)+X1$MSK;",
-  );
-  #unless ( (1 << 16) << 16) { %f = %{$CODES{'32bit'}} }
-  #else { %f = %{$CODES{'64bit'}} }
-
-  my %s = (  # shift lengths
-  S11 => 7, S12 => 12, S13 => 17, S14 => 22, S21 => 5, S22 => 9, S23 => 14,
-  S24 => 20, S31 => 4, S32 => 11, S33 => 16, S34 => 23, S41 => 6, S42 => 10,
-  S43 => 15, S44 => 21
-  );
-
-  my $insert = "";
-  while(<DATA>) {
-  chomp;
-  next unless /^[FGHI]/;
-  my ($func,@x) = split /,/;
-  my $c = $f{$func};
-  $c =~ s/X(\d)/$x[$1]/g;
-  $c =~ s/(S\d{2})/$s{$1}/;
-        $c =~ s/^(.*)=rotate_left\((.*),(.*)\)\+(.*)$//;
-
-  #my $rotate = "(($2 << $3) || (($2 >> (32 - $3)) & (1 << $2) - 1)))"; 
-  $c = "\$r = $2;
-        $1 = ((\$r << $3) | ((\$r >> (32 - $3))  & ((1 << $3) - 1))) + $4";
-  $insert .= "\t$c\n";
-  }
-  close DATA;
-  
-  my $dump = '
-  sub round {
-  my ($a,$b,$c,$d) = @_[0 .. 3];
-  my $r;
-
-  ' . $insert . '
-  $_[0]+$a' . $MSK . ', $_[1]+$b ' . $MSK . 
-        ', $_[2]+$c' . $MSK . ', $_[3]+$d' . $MSK . ';
-  }';
-  eval $dump;
-  #print "$dump\n";
-  #exit 0;
-}
-
-gen_code();
-
-sub _encode_hex { unpack 'H*', $_[0] }
-
-###
-# Procedural interface:
-sub md5_proc {
-  my $message = padding(join'',@_);
-  my ($a,$b,$c,$d) = (A,B,C,D);
-  my $i;
-  for $i (0 .. (length $message)/64-1) {
-    my @X = unpack 'V16', substr $message,$i*64,64; 
-    ($a,$b,$c,$d) = round($a,$b,$c,$d,@X);
-  }
-  pack 'V4',$a,$b,$c,$d;
-}
-
-sub md5 { _encode_hex &md5_proc } 
 
 #
 #  Ensure we received an argument.
 #
-my ( $cmd, @args ) = @ARGV;
-if ( !defined($cmd) )
-{
-    usage();
-}
+if ! argv._.length
+  usage()
+else
+  $cmd = argv._.shift()
+  $args = argv._
 
 #
 #  Decide what to do, based upon the command given.
 #
-if ( $cmd =~ /^init$/i )
-{
+if $cmd.match /^init$/i
 
-    #
-    #  Initialise.
-    #
-    cmd_init();
-    exit 0;
-}
-elsif ( $cmd =~ /^add$/i )
-{
+  #
+  #  Initialise.
+  #
+  cmd_init()
+  process.exit 0
 
-    #
-    #  Add a bug.
-    #
-    cmd_add(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^append$/i )
-{
+else if $cmd.match /^add$/i
 
-    #
-    #  Append a section of text to an existing bug report.
-    #
-    cmd_append(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^html$/i )
-{
+  #
+  #  Add a bug.
+  #
+  cmd_add $args
+  process.exit 0
+else if $cmd.match /^append$/i
 
-    #
-    #  Output bugs as a simple HTML page.
-    #
-    cmd_html(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^(list|search)$/i )
-{
+  #
+  #  Append a section of text to an existing bug report.
+  #
+  cmd_append $args
+  process.exit 0
+else if $cmd.match /^html$/i
 
-    #
-    #  Find bugs.
-    #
-    cmd_search(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^open$/i )
-{
+  #
+  #  Output bugs as a simple HTML page.
+  #
+  cmd_html $args
+  process.exit 0
+else if $cmd.match /^(list|search)$/i
 
-    #
-    #  List only open bugs.
-    #
-    $CONFIG{ 'state' } = "open";
-    cmd_search(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^closed$/i )
-{
+  #
+  #  Find bugs.
+  #
+  cmd_search $args
+  process.exit 0
+else if $cmd.match /^open$/i
 
-    #
-    #  List only closed bugs.
-    #
-    $CONFIG{ 'state' } = "closed";
-    cmd_search(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^view$/i )
-{
+  #
+  #  List only open bugs.
+  #
+  cmd_search $args, 'open'
+  process.exit 0
+else if $cmd.match /^closed$/i
 
-    #
-    #  View a single bug.
-    #
-    cmd_view(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^close$/i )
-{
+  #
+  #  List only closed bugs.
+  #
+  cmd_search $args, 'closed'
+  process.exit 0
+else if $cmd.match /^view$/i
 
-    #
-    #  Mark a bug as closed.
-    #
-    cmd_close(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^reopen$/i )
-{
+  #
+  #  View a single bug.
+  #
+  cmd_view $args
+  process.exit 0
+else if $cmd.match /^close$/i
 
-    #
-    #  Mark a bug as open.
-    #
-    cmd_reopen(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^edit$/i )
-{
+  #
+  #  Mark a bug as closed.
+  #
+  cmd_close $args
+  process.exit 0
+else if $cmd.match /^reopen$/i
 
-    #
-    #  Edit a bug.
-    #
-    cmd_edit(@args);
-    exit 0;
-}
-elsif ( $cmd =~ /^delete$/i )
-{
+  #
+  #  Mark a bug as open.
+  #
+  cmd_reopen $args
+  process.exit 0
+else if $cmd.match /^edit$/i
 
-    #
-    #  Delete a bug.
-    #
-    cmd_delete(@args);
-    exit 0;
-}
+  #
+  #  Edit a bug.
+  #
+  cmd_edit $args
+  process.exit 0
+else if $cmd.match /^delete$/i
+
+  #
+  #  Delete a bug.
+  #
+  cmd_delete $args
+  process.exit 0
 else
-{
-    usage();
-}
+  usage()
 
-exit 0;
+process.exit 0
+
+
+debug =
+  opts: opts
+  argv: argv
+  cmd: $cmd
+  args: $args
+console.log debug
+old_code = """
 
 
 
