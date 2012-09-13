@@ -94,9 +94,45 @@ randomUID = ->
 exit = (code) ->
   process.exit code
 
-#
-#  Core Functions
-#
+### 
+# 
+# Open the given file with either the users editor, the systems editor,
+# or as a last resort vim.
+# 
+###
+
+editFile = (file) ->
+
+    #
+    #  Open the editor
+    #
+
+    # $editor = $CONFIG{ 'editor' } || $ENV{ 'EDITOR' } || "vim";
+    execSync "sub #{file}"
+
+### 
+# 
+# Remove the "# klog: " prefix from the given file.
+# 
+###
+
+removeClog = ($file) ->
+
+  #
+  #  Open the source file for reading.
+  #
+  try
+    buffer = fs.readFileSync $file
+  catch e
+    console.log "Failed to open #{$file}"
+    exit 
+
+  content = buffer.toString().replace /^# klog:.*\n/mg, ''
+
+  #
+  #  Write the contents, removing any lines matching our marker-pattern
+  #
+  fs.writeFileSync $file, content
 
 #  Constants
 opts =
@@ -184,6 +220,14 @@ parseCommandLineArguments()
 
 md5 = require('./md5.js').MD5.hex_md5
 
+
+#
+#  Core Functions
+#
+
+hook = (action, file) ->
+  console.log action, file
+
 #
 #  Handlers for the commands.
 #
@@ -212,36 +256,52 @@ cmd_add = (args, type) ->
 
   $file = ".klog/#{opts.date}.#{$uid}.log";
 
-  console.log "[#{$type}] #{$title} :: #{$file}"
-
   #
   #  Write our template to it
   #
   $template = """
-UID: #{$uid}
-Type: #{$type}
-Title: #{$title}
-Added: #{opts.date}
-Status: open
+  UID: #{$uid}
+  Type: #{$type}
+  Title: #{$title}
+  Added: #{opts.date}
+  Status: open
 
-#{argv.message || ''}\n\n
-"""
-  fs.writeFileSync $file, $template
+  """
 
-"""
+  #
+  #  If we were given a message, add it to the file, and return without
+  #  invoking the editor.
+  #
+  if argv.message
+    fs.writeFileSync $file, $template + argv.message+ "\n\n"
     #
-    #  If we were given a message, add it to the file, and return without
-    # invoking the editor.
+    #  If there is a hook, run it.
     #
-    if ( $CONFIG{ 'message' } )
-    {
-        print FILE $CONFIG{ 'message' };
-        print FILE "\n";
-        close(NEW);
-        return;
-    }
+    hook "add", $file
+    return
+  #
+  #  Otherwise add the default text, and show it in an editor.
+  #  (ending newline helps in stripping the comments out later)
+  else
+    $template += """
 
+    # klog:
+    # klog:  Enter your bug report here; it is better to write too much than
+    # klog: too little.
+    # klog:
+    # klog:  Lines beginning with "# klog:" will be ignored, and removed,
+    # klog: this file is saved.
+    # klog:\n
+    """
 
+    fs.writeFileSync $file, $template
+
+    #
+    #  Open the file in the users' editor.
+    #
+    editFile $file
+
+    ### one day we could use a bug template file
     if ( -e ".klog/new-bug-template" )
     {
         open( TMP, "<", ".klog/new-bug-template" ) or
@@ -252,45 +312,17 @@ Status: open
         }
         close(TMP);
     }
-    else
-    {
+    ###
 
-        #
-        #  Otherwise add the default text, and show it in an editor.
-        #
-        print FILE<<EOF;
-# klog:
-# klog:  Enter your bug report here; it is better to write too much than
-# klog: too little.
-# klog:
-# klog:  Lines beginning with "# klog:" will be ignored, and removed,
-# klog: this file is saved.
-# klog:
+  #
+  #  Once it was saved remove the lines that mention "# klog: "
+  #
+  removeClog $file
 
-EOF
-        close(FILE);
-    }
-
-
-    #
-    #  Open the file in the users' editor.
-    #
-    editFile($file);
-
-    #
-    #  Once it was saved remove the lines that mention "# klog: "
-    #
-    removeClog($file);
-
-    #
-    #  If there is a hook, run it.
-    #
-    if ( -x ".klog/hook" )
-    {
-        system( ".klog/hook", "add", $file );
-    }
-}
-"""
+  #
+  #  If there is a hook, run it.
+  #
+  hook "add", $file
 
 cmd_append = (args) ->
   console.log 'will append with ' + args
@@ -736,101 +768,6 @@ sub cmd_delete
 }
 
 # 
-# Open an editor with a new block appended to the end of the file.
-# 
-# This mostly means:
-# 
-#    1.  find the file associated with a given bug.
-# 
-#    2.  Append the new text.
-# 
-#    3.  Allow the user to edit that file.
-# 
-# 
-###
-
-sub cmd_append
-{
-    my (@args) = (@_);
-    my $value = join( "", @args );
-
-
-    #
-    #  Ensure we know what we're operating upon
-    #
-    if ( !length($value) )
-    {
-        print
-          "You must specify a bug to append to, either by the UID, or via the number.\n";
-        print "\nFor example to append text to bug number 3 you'd run:\n";
-        print "\tklog append 3\n\n";
-        exit 1;
-    }
-
-    #
-    #  Get the bug
-    #
-    my $bug = getBugByUIDORNumber($value);
-
-    #
-    #  Open the file.
-    #
-    open( NEW, ">>", $bug->{ 'file' } ) or
-      die "Failed to open file $bug->{'file'} for appending: $!";
-
-
-    my $date = date();
-
-    #
-    #  If we were given a message add it, otherwise spawn the editor.
-    #
-    if ( $CONFIG{ 'message' } )
-    {
-        print NEW "\nModified: $date\n";
-        print NEW $CONFIG{ 'message' };
-        print NEW "\n";
-        close(NEW);
-        return;
-    }
-
-    #
-    #  Write out the new section
-    #
-    print NEW <<EOF;
-
-Modified: $date
-
-# klog:
-# klog:  Enter your bug update here; it is better to write too much than
-# klog: too little.
-# klog:
-# klog:  Lines beginning with "# klog:" will be ignored, and removed, once
-# klog: this file is saved.
-# klog:
-EOF
-    close(NEW);
-
-    #
-    #  Allow the user to make the edits.
-    #
-    editFile( $bug->{ 'file' } );
-
-    #
-    #  Once it was saved remove the lines that mention "# klog: "
-    #
-    removeClog( $bug->{ 'file' } );
-
-    #
-    #  If there is a hook, run it.
-    #
-    if ( -x ".klog/hook" )
-    {
-        system( ".klog/hook", "append", $bug->{ 'file' } );
-    }
-
-}
-
-# 
 # View a specific bug.
 # 
 # This means:
@@ -1074,72 +1011,6 @@ sub getBugs
     return ($results);
 }
 
-
-# 
-# Open the given file with either the users editor, the systems editor,
-# or as a last resort vim.
-# 
-# 
-###
-
-sub editFile
-{
-    my ($file) = (@_);
-
-    #
-    #  Open the editor
-    #
-    my $editor = $CONFIG{ 'editor' } || $ENV{ 'EDITOR' } || "vim";
-    system( $editor, $file );
-
-}
-
-
-# 
-# Remove the "# klog: " prefix from the given file.
-# 
-# 
-###
-
-sub removeClog
-{
-    my ($file) = (@_);
-
-    my @lines;
-
-    #
-    #  Open the source file for reading.
-    #
-    open( FILE, "<", $file ) or
-      die "Failed to open $file - $!";
-
-    #
-    #  Read it, and store the contents away.
-    #
-    while ( my $line = <FILE> )
-    {
-        push( @lines, $line );
-    }
-    close(FILE);
-
-
-    #
-    #  Open the file for writing.
-    #
-    open( NEW, ">", $file ) or
-      die "Failed to open $file - $!";
-
-    #
-    #  Write the contents, removing any lines matching our marker-pattern
-    #
-    foreach my $line (@lines)
-    {
-        next if ( $line =~ /^# klog:/ );
-        print NEW $line;
-    }
-    close(NEW);
-
-}
 
 # 
 # Get the data for a given bug, either by number of UID.
