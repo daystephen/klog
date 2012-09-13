@@ -86,6 +86,81 @@ randomUID = ->
 
     return $uid
 
+### 
+# 
+# Find and return an array of hashes, one for each existing bug.
+# 
+###
+getBugs = ->
+  #files = execSync "ls .klog/*.#{opts.ext}"
+  files = fs.readdirSync '.klog'
+  files.sort()
+  $results = []
+  for file in files
+    buffer = fs.readFileSync ".klog/#{file}"
+    lines = buffer.toString().split /\n/
+    # console.log content
+    $body = []
+    $number = 1
+    for line in lines
+      if m = line.match /^Title: (.*)/
+        $title = m[1]
+      else if m = line.match /^Type: (.*)/
+        $type = m[1]
+      else if m = line.match /^(Added|Modified):(.*)/
+        # ignored
+      else if m = line.match /^UID: (.*)/
+        $uid = m[1]
+      else if m = line.match /^Status: (.*)/i
+        $status = m[1]
+      else
+        $body.push line
+    $results.push
+      file: file
+      body: $body
+      number: $number++
+      uid: $uid
+      status: $status
+      type: $type
+      title: $title
+
+  return $results
+
+#
+#  Print to console
+#
+print = (txt) ->
+  console.log txt
+
+###
+# 
+# Get the data for a given bug, either by number of UID.
+# 
+###
+getBugByUIDORNumber = ($arg) ->
+  #
+  #  Get all bugs.
+  #
+  $bugs = getBugs()
+  #
+  #  For each one.
+  #
+  for $possible in $bugs
+    #
+    # If the argument was NNNN then look for that bug number.
+    #
+    if m = $arg.match /^([0-9]{1,3})$/i
+      $bug = $possible if m[1] == $possible.number
+    else
+      #
+      #  Otherwise look for it by UID
+      #
+      $bug = $possible if $arg.toLowerCase() == $possible.uid.toLowerCase()
+
+    if $bug
+      return $bug
+  print "Bug not found: #{$arg}\n"
+  exit 1
 
 #
 #  Exit app
@@ -324,8 +399,60 @@ cmd_add = (args, type) ->
   #
   hook "add", $file
 
+### 
+# Open an editor with a new block appended to the end of the file.
+# 
+# This mostly means:
+# 
+#    1.  find the file associated with a given bug.
+# 
+#    2.  Append the new text.
+# 
+#    3.  Allow the user to edit that file.
+# 
+# 
+###
 cmd_append = (args) ->
-  console.log 'will append with ' + args
+
+    #
+    #  Ensure we know what we're operating upon
+    #
+    if !args.length
+      console.log """
+      You must specify a bug to append to, either by the UID, or via the number.
+      For example to append text to bug number 3 you'd run:
+      \n\tklog append 3\n
+      """
+      exit 1
+
+    #
+    #  Get the bug
+    #
+    $bug = getBugByUIDORNumber $args[0]
+    console.log $bug
+
+    #
+    #  If we were given a message add it, otherwise spawn the editor.
+    #
+    if argv.message
+      $out = "\nModified: #{opts.date}\n#{argv.message}\n"
+      fs.appendFileSync '.klog/'+$bug.file, $out
+      return
+    #
+    #  Allow the user to make the edits.
+    #
+    editFile ".klog/"+$bug.file
+
+    #
+    #  Once it was saved remove the lines that mention "# klog: "
+    #
+    removeClog ".klog/"+$bug.file
+
+    #
+    #  If there is a hook, run it.
+    #
+    hook "append", $bug.file
+
 
 cmd_html = (args) ->
   console.log 'will html with ' + args
@@ -943,121 +1070,4 @@ EOF
     }
 }
 
-# 
-# Find and return an array of hashes, one for each existing bug.
-# 
-# 
-###
-
-sub getBugs
-{
-    my $results;
-    my $number = 0;
-
-    foreach my $file ( sort( glob(".klog/*.$ext") ) )
-    {
-        $number += 1;
-
-        my $status;
-        my $title;
-        my $type;
-        my $uid;
-        my $body;
-
-        open( FILE, "<", $file );
-        while ( my $line = <FILE> )
-        {
-            if ( $line =~ /^Title: (.*)/ )
-            {
-                $title = $1;
-            }
-         
-            if ( $line =~ /^Type: (.*)/ )
-            {
-                $type = $1;
-            }
-            elsif ( $line =~ /^(Added|Modified):(.*)/ )
-            {
-
-                # ignored.
-            }
-            elsif ( $line =~ /^UID: (.*)/ )
-            {
-                $uid = $1;
-            }
-            elsif ( $line =~ /^Status: (.*)/i )
-            {
-                $status = $1;
-            }
-            else
-            {
-                $body .= $line;
-            }
-
-        }
-        close(FILE);
-
-        push( @$results,
-              {  file   => $file,
-                 body   => $body,
-                 number => $number,
-                 uid    => $uid,
-                 status => $status,
-                 type => $type,
-                 title  => $title
-              } );
-    }
-
-    return ($results);
-}
-
-
-# 
-# Get the data for a given bug, either by number of UID.
-# 
-# 
-###
-
-sub getBugByUIDORNumber
-{
-    my ($arg) = (@_);
-
-    #
-    #  Get all bugs.
-    #
-    my $bugs = getBugs();
-    my $bug;
-
-    #
-    #  For each one.
-    #
-    foreach my $possible (@$bugs)
-    {
-
-        #
-        # If the argument was NNNN then look for that bug number.
-        #
-        if ( $arg =~ /^([0-9]+)$/i )
-        {
-            $bug = $possible if ( $1 == $possible->{ 'number' } );
-        }
-        else
-        {
-
-            #
-            #  Otherwise look for it by UID
-            #
-            $bug = $possible if ( lc($arg) eq lc( $possible->{ 'uid' } ) );
-        }
-
-        return $bug if ( defined($bug) );
-    }
-
-    if ( !defined($bug) )
-    {
-        print "Bug not found: $arg\n";
-        exit 1;
-    }
-
-}
 """
