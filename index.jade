@@ -132,6 +132,9 @@ html
         }
       }
 
-      $('#banner').on('mouseenter',function(){
-        $(this).css({position: 'relative'}).animate({top:-40},700,'easeOutCubic').animate({top:30},260,'easeOutBounce').delay(1000).animate({top:0},800,'easeOutCubic')
+      $('#banner').on('click',function(){
+        $(this).css({position: 'relative'}).animate({top:-40},700,'easeOutCubic').animate({top:30},260,'easeOutBounce',function(){
+          window.location = window.location
+        })
+        return false
       })

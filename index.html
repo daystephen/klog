@@ -75,4 +75,23 @@ $ # business as usual</textarea><h3>Issue tracking</h3><p>files are stored as pl
   });
 
 }).call(this);
+</script><script>$.easing.easeOutCubic = function (x, t, b, c, d) { return c*((t=t/d-1)*t*t + 1) + b; }
+$.easing.easeOutBounce = function (x, t, b, c, d) {
+  if ((t/=d) < (1/2.75)) {
+    return c*(7.5625*t*t) + b;
+  } else if (t < (2/2.75)) {
+    return c*(7.5625*(t-=(1.5/2.75))*t + .75) + b;
+  } else if (t < (2.5/2.75)) {
+    return c*(7.5625*(t-=(2.25/2.75))*t + .9375) + b;
+  } else {
+    return c*(7.5625*(t-=(2.625/2.75))*t + .984375) + b;
+  }
+}
+
+$('#banner').on('click',function(){
+  $(this).css({position: 'relative'}).animate({top:-40},700,'easeOutCubic').animate({top:30},260,'easeOutBounce',function(){
+    window.location = window.location
+  })
+  return false
+})
 </script></body></html>
