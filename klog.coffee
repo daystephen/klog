@@ -474,9 +474,16 @@ return MD5;
 
 })()`
 
-cmd_init = ->
-  console.log 'will init'
+#
+#  Handlers for the commands.
+#
+#
 
+###
+# 
+# Inititalise a new .klog directory.
+# 
+###
 cmd_add = (args) ->
   console.log 'will add with ' + args
 
@@ -505,9 +512,13 @@ cmd_edit = (args) ->
 cmd_delete = (args) ->
   console.log 'will delete with ' + args
 
-cmd_init = (args) ->
-  console.log 'will init with ' + args
-
+cmd_init = ->
+  if ! fs.existsSync ".klog"
+    fs.mkdirSync ".klog"
+    process.exit 0
+  else
+    console.log "There is already a .klog/ directory present here.\n"
+    process.exit 1
 
 #
 #  Ensure we received an argument.
@@ -620,33 +631,6 @@ debug =
 console.log debug
 old_code = """
 
-
-
-###
-###  Handlers for the commands.
-###
-###
-
-
-# 
-# Inititalise a new .klog directory.
-# 
-# 
-###
-
-sub cmd_init
-{
-    if ( !-d ".klog" )
-    {
-        mkpath( ".klog", { verbose => 0 } );
-        exit 0;
-    }
-    else
-    {
-        print "There is already a .klog/ directory present here.\n";
-        exit 1;
-    }
-}
 
 
 # 
