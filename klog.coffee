@@ -33,16 +33,75 @@
 #  Modules
 #
 fs = require 'fs'
-argv = require('optimist').argv
+#sys = require("sys")
+exec = require("child_process").exec
+execSync = require('exec-sync')
+argv = require('optimist')
+  .alias('t','type')
+  .alias('m','message')
+  .argv
+
+###
+#
+#  Utility functions.
+#
+###
+
+#
+#  Pad a string (with 0 or specified)
+#
+pad=`function(e,t,n){n=n||"0",t=t||2;while((""+e).length<t)e=n+e;return e}`
+
+###
+#
+# return date in format
+#
+#    yyyy-mm-dd_hh-ii-ss
+#
+###
+
+date = ->
+  c = new Date()
+  return c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate()-5)+"_"+c.toLocaleTimeString().replace(/\D/g,'-')+"."+pad(c.getMilliseconds(),3)
+
+### 
+# Generate a system UID.  This should be created with the hostname and
+# time included, such that collisions when running upon multiple systems
+# are unlikely.
+# 
+# (A bug will be uniquely referenced by the UID, even though in practise
+# people will use bug numbers they are prone to change.)
+# 
+# 
+###
+
+randomUID = ->
+    #
+    #  The values that feed into the filename.
+    #
+    $email = execSync 'git config --get user.email'
+    $uid = opts.date+"."+$email
+    $uid = md5 $uid
+    $uid = $uid.replace /(.{4}).+/, "$1"
+
+    return $uid
+
+
+#
+#  Exit app
+#
+
+exit = (code) ->
+  process.exit code
+
+#
+#  Core Functions
+#
 
 #  Constants
 opts =
-  ext: 'log'; # file extension for data files
-
-#
-#  Functions
-#
-
+  ext: 'log' # file extension for data files
+  date: date()
 
 ###
 #
@@ -51,7 +110,6 @@ opts =
 ###
 
 parseCommandLineArguments = ->
-  HELP = 0
   if argv.help
     usage()
 ###  #
@@ -111,7 +169,7 @@ usage = ->
       -s, --state         - Restrict matches when searching.
 
   '''
-  process.exit()
+  exit 0
 
 #
 #  Parse any command line options.
@@ -132,203 +190,45 @@ md5 = require('./md5.js').MD5.hex_md5
 #
 
 ###
-# 
-# Inititalise a new .klog directory.
-# 
-###
-cmd_add = (args) ->
-  console.log 'will add with ' + args
-
-cmd_append = (args) ->
-  console.log 'will append with ' + args
-
-cmd_html = (args) ->
-  console.log 'will html with ' + args
-
-cmd_search = (args, state) ->
-  state ?= 'all'
-  console.log 'will search ('+state+') with ' + args
-
-cmd_view = (args) ->
-  console.log 'will view with ' + args
-
-cmd_close = (args) ->
-  console.log 'will close with ' + args
-
-cmd_reopen = (args) ->
-  console.log 'will reopen with ' + args
-
-cmd_edit = (args) ->
-  console.log 'will edit with ' + args
-
-cmd_delete = (args) ->
-  console.log 'will delete with ' + args
-
-cmd_init = ->
-  if ! fs.existsSync ".klog"
-    fs.mkdirSync ".klog"
-    process.exit 0
-  else
-    console.log "There is already a .klog/ directory present here.\n"
-    process.exit 1
-
-#
-#  Ensure we received an argument.
-#
-if ! argv._.length
-  usage()
-else
-  $cmd = argv._.shift()
-  $args = argv._
-
-#
-#  Decide what to do, based upon the command given.
-#
-if $cmd.match /^init$/i
-
-  #
-  #  Initialise.
-  #
-  cmd_init()
-  process.exit 0
-
-else if $cmd.match /^add$/i
-
-  #
-  #  Add a bug.
-  #
-  cmd_add $args
-  process.exit 0
-else if $cmd.match /^append$/i
-
-  #
-  #  Append a section of text to an existing bug report.
-  #
-  cmd_append $args
-  process.exit 0
-else if $cmd.match /^html$/i
-
-  #
-  #  Output bugs as a simple HTML page.
-  #
-  cmd_html $args
-  process.exit 0
-else if $cmd.match /^(list|search)$/i
-
-  #
-  #  Find bugs.
-  #
-  cmd_search $args
-  process.exit 0
-else if $cmd.match /^open$/i
-
-  #
-  #  List only open bugs.
-  #
-  cmd_search $args, 'open'
-  process.exit 0
-else if $cmd.match /^closed$/i
-
-  #
-  #  List only closed bugs.
-  #
-  cmd_search $args, 'closed'
-  process.exit 0
-else if $cmd.match /^view$/i
-
-  #
-  #  View a single bug.
-  #
-  cmd_view $args
-  process.exit 0
-else if $cmd.match /^close$/i
-
-  #
-  #  Mark a bug as closed.
-  #
-  cmd_close $args
-  process.exit 0
-else if $cmd.match /^reopen$/i
-
-  #
-  #  Mark a bug as open.
-  #
-  cmd_reopen $args
-  process.exit 0
-else if $cmd.match /^edit$/i
-
-  #
-  #  Edit a bug.
-  #
-  cmd_edit $args
-  process.exit 0
-else if $cmd.match /^delete$/i
-
-  #
-  #  Delete a bug.
-  #
-  cmd_delete $args
-  process.exit 0
-else
-  usage()
-
-process.exit 0
-
-
-debug =
-  opts: opts
-  argv: argv
-  cmd: $cmd
-  args: $args
-console.log debug
-old_code = """
-
-
-
-# 
 # Add a new bug.
 # 
-# The arguments specified are the optional title.
-# 
+# The arguments specified are the optional title. 
 # 
 ###
+cmd_add = (args, type) ->
 
-sub cmd_add
-{
-    my (@args) = (@_);
+  if args.length
+    $title = args.join " "
+  else
+    $title = "Untitled bug report"
 
-    my $title = undef;
-    if ( scalar(@args) )
-    {
-        $title = join( " ", @args );
-    }
+  $type = type || 'bug'
 
-    $title = "Untitled bug report" unless ( defined($title) );
+  #
+  #  Make a "random" filename, with the same UID as the content.s
+  #
 
-    my $type =  $CONFIG{ 'type'} || 'bug';
+  $uid  = randomUID()
 
-    #
-    #  Make a "random" filename, with the same UID as the content.s
-    #
-    my $uid  = randomUID();
-    my $file = ".klog/".date().".$uid.log";
+  $file = ".klog/#{opts.date}.#{$uid}.log";
 
-    my $date = date();
+  console.log "[#{$type}] #{$title} :: #{$file}"
 
-    #
-    #  Write our template to it
-    #
-    open( FILE, ">", $file );
-    print FILE<<EOF;
-UID: $uid
-Type: $type
-Title: $title
-Added: $date
+  #
+  #  Write our template to it
+  #
+  $template = """
+UID: #{$uid}
+Type: #{$type}
+Title: #{$title}
+Added: #{opts.date}
 Status: open
 
-EOF
+#{argv.message || ''}\n\n
+"""
+  fs.writeFileSync $file, $template
 
-
+"""
     #
     #  If we were given a message, add it to the file, and return without
     # invoking the editor.
@@ -390,6 +290,157 @@ EOF
         system( ".klog/hook", "add", $file );
     }
 }
+"""
+
+cmd_append = (args) ->
+  console.log 'will append with ' + args
+
+cmd_html = (args) ->
+  console.log 'will html with ' + args
+
+cmd_search = (args, state) ->
+  state ?= 'all'
+  console.log 'will search ('+state+') with ' + args
+
+cmd_view = (args) ->
+  console.log 'will view with ' + args
+
+cmd_close = (args) ->
+  console.log 'will close with ' + args
+
+cmd_reopen = (args) ->
+  console.log 'will reopen with ' + args
+
+cmd_edit = (args) ->
+  console.log 'will edit with ' + args
+
+cmd_delete = (args) ->
+  console.log 'will delete with ' + args
+
+###
+# 
+# Inititalise a new .klog directory.
+# 
+###
+cmd_init = ->
+  if ! fs.existsSync ".klog"
+    fs.mkdirSync ".klog"
+    exit 0
+  else
+    console.log "There is already a .klog/ directory present here.\n"
+    exit 1
+
+#
+#  Ensure we received an argument.
+#
+if ! argv._.length
+  usage()
+else
+  $cmd = argv._.shift()
+  $args = argv._
+
+#
+#  Decide what to do, based upon the command given.
+#
+if $cmd.match /^init$/i
+
+  #
+  #  Initialise.
+  #
+  cmd_init()
+  exit 0
+
+else if $cmd.match /^add$/i
+
+  #
+  #  Add a bug.
+  #
+  cmd_add $args, argv.type
+  exit 0
+else if $cmd.match /^append$/i
+
+  #
+  #  Append a section of text to an existing bug report.
+  #
+  cmd_append $args
+  exit 0
+else if $cmd.match /^html$/i
+
+  #
+  #  Output bugs as a simple HTML page.
+  #
+  cmd_html $args
+  exit 0
+else if $cmd.match /^(list|search)$/i
+
+  #
+  #  Find bugs.
+  #
+  cmd_search $args
+  exit 0
+else if $cmd.match /^open$/i
+
+  #
+  #  List only open bugs.
+  #
+  cmd_search $args, 'open'
+  exit 0
+else if $cmd.match /^closed$/i
+
+  #
+  #  List only closed bugs.
+  #
+  cmd_search $args, 'closed'
+  exit 0
+else if $cmd.match /^view$/i
+
+  #
+  #  View a single bug.
+  #
+  cmd_view $args
+  exit 0
+else if $cmd.match /^close$/i
+
+  #
+  #  Mark a bug as closed.
+  #
+  cmd_close $args
+  exit 0
+else if $cmd.match /^reopen$/i
+
+  #
+  #  Mark a bug as open.
+  #
+  cmd_reopen $args
+  exit 0
+else if $cmd.match /^edit$/i
+
+  #
+  #  Edit a bug.
+  #
+  cmd_edit $args
+  exit 0
+else if $cmd.match /^delete$/i
+
+  #
+  #  Delete a bug.
+  #
+  cmd_delete $args
+  exit 0
+else
+  usage()
+
+exit 0
+
+
+debug =
+  opts: opts
+  argv: argv
+  cmd: $cmd
+  args: $args
+console.log debug
+old_code = """
+
 
 # 
 # Output a HTML page for the bugs.
@@ -896,29 +947,6 @@ sub cmd_reopen
 
 }
 
-###
-###  Utility functions.
-###
-###
-
-#
-# return date in format
-#
-#    yyyy-mm-dd_hh-ii-ss
-#
-###
-
-sub date
-{
-
-    if(!$executionDate){
-      my ( $time, $microseconds ) = gettimeofday;
-      $executionDate = sprintf "%d-%02d-%02d_%02d-%02d-%02d.%06d", map { $$_[5]+1900, $$_[4]+1, $$_[3], $$_[2], $$_[1], $$_[0], $microseconds } [localtime];      
-    }
-
-    return $executionDate;
-}
-
 # 
 # Change the statues of an existing bug.  Valid statuses are
 # "open" and "closed".
@@ -976,32 +1004,6 @@ EOF
     {
         system( ".klog/hook", $state, $bug->{ 'file' } );
     }
-}
-
-# 
-# Generate a system UID.  This should be created with the hostname and
-# time included, such that collisions when running upon multiple systems
-# are unlikely.
-# 
-# (A bug will be uniquely referenced by the UID, even though in practise
-# people will use bug numbers they are prone to change.)
-# 
-# 
-###
-
-sub randomUID
-{
-
-    #
-    #  The values that feed into the filename.
-    #
-    my $email = `git config --get user.email`;
-    chomp $email;
-    my $uid = join ".", date(), $email;
-    $uid = md5($uid);
-    $uid =~ s/(.{4}).+/$1/;
-
-    return ($uid);
 }
 
 # 
