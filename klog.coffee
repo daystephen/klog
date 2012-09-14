@@ -99,7 +99,7 @@ getBugs = ->
   for file in files
     buffer = fs.readFileSync ".klog/#{file}"
     lines = buffer.toString().split /\n/
-    # console.log content
+    # print content
     $body = []
     $number = 1
     for line in lines
@@ -199,7 +199,7 @@ removeClog = ($file) ->
   try
     buffer = fs.readFileSync $file
   catch e
-    console.log "Failed to open #{$file}"
+    print "Failed to open #{$file}"
     exit 
 
   content = buffer.toString().replace /^# klog:.*\n/mg, ''
@@ -256,7 +256,7 @@ parseCommandLineArguments = ->
 ###
 
 usage = ->
-  console.log '''
+  print '''
 
   klog [options] sub-command [args]
 
@@ -301,7 +301,7 @@ md5 = require('./md5.js').MD5.hex_md5
 #
 
 hook = (action, file) ->
-  console.log action, file
+  print action, file
 
 #
 #  Handlers for the commands.
@@ -418,7 +418,7 @@ cmd_append = (args) ->
     #  Ensure we know what we're operating upon
     #
     if !args.length
-      console.log """
+      print """
       You must specify a bug to append to, either by the UID, or via the number.
       For example to append text to bug number 3 you'd run:
       \n\tklog append 3\n
@@ -429,7 +429,7 @@ cmd_append = (args) ->
     #  Get the bug
     #
     $bug = getBugByUIDORNumber $args[0]
-    console.log $bug
+    print $bug
 
     #
     #  If we were given a message add it, otherwise spawn the editor.
@@ -455,26 +455,26 @@ cmd_append = (args) ->
 
 
 cmd_html = (args) ->
-  console.log 'will html with ' + args
+  print 'will html with ' + args
 
 cmd_search = (args, state) ->
   state ?= 'all'
-  console.log 'will search ('+state+') with ' + args
+  print 'will search ('+state+') with ' + args
 
 cmd_view = (args) ->
-  console.log 'will view with ' + args
+  print 'will view with ' + args
 
 cmd_close = (args) ->
-  console.log 'will close with ' + args
+  print 'will close with ' + args
 
 cmd_reopen = (args) ->
-  console.log 'will reopen with ' + args
+  print 'will reopen with ' + args
 
 cmd_edit = (args) ->
-  console.log 'will edit with ' + args
+  print 'will edit with ' + args
 
 cmd_delete = (args) ->
-  console.log 'will delete with ' + args
+  print 'will delete with ' + args
 
 ###
 # 
@@ -486,7 +486,7 @@ cmd_init = ->
     fs.mkdirSync ".klog"
     exit 0
   else
-    console.log "There is already a .klog/ directory present here.\n"
+    print "There is already a .klog/ directory present here.\n"
     exit 1
 
 #
@@ -597,7 +597,7 @@ debug =
   argv: argv
   cmd: $cmd
   args: $args
-console.log debug
+print debug
 old_code = """
 
 
