@@ -1,0 +1,7 @@
+UID: cc07
+Type: bug
+Title: node module causing error
+Added: 2012-09-14_14-28-35.757720
+Status: open
+
+"Utf8String" type is deprecated, use "CString" instead
