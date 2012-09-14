@@ -33,7 +33,6 @@
 #  Modules
 #
 fs = require 'fs'
-#sys = require("sys")
 exec = require("child_process").exec
 execSync = require('exec-sync')
 argv = require('optimist')
@@ -93,36 +92,37 @@ randomUID = ->
 ###
 getBugs = ->
   #files = execSync "ls .klog/*.#{opts.ext}"
-  files = fs.readdirSync '.klog'
+  files = fs.readdirSync '.klog/'
   files.sort()
   $results = []
   $number = 1
   for file in files
-    buffer = fs.readFileSync ".klog/#{file}"
-    lines = buffer.toString().split /\n/
-    # print content
-    $body = []
-    for line in lines
-      if m = line.match /^Title: (.*)/
-        $title = m[1]
-      else if m = line.match /^Type: (.*)/
-        $type = m[1]
-      else if m = line.match /^(Added|Modified):(.*)/
-        # ignored
-      else if m = line.match /^UID: (.*)/
-        $uid = m[1]
-      else if m = line.match /^Status: (.*)/i
-        $status = m[1]
-      else
-        $body.push line
-    $results.push
-      file: file
-      body: $body
-      number: $number++
-      uid: $uid
-      status: $status
-      type: $type
-      title: $title
+    if file.match /\.log$/
+      buffer = fs.readFileSync ".klog/#{file}"
+      lines = buffer.toString().split /\n/
+      # print content
+      $body = []
+      for line in lines
+        if m = line.match /^Title: (.*)/
+          $title = m[1]
+        else if m = line.match /^Type: (.*)/
+          $type = m[1]
+        else if m = line.match /^(Added|Modified):(.*)/
+          # ignored
+        else if m = line.match /^UID: (.*)/
+          $uid = m[1]
+        else if m = line.match /^Status: (.*)/i
+          $status = m[1]
+        else
+          $body.push line
+      $results.push
+        file: file
+        body: $body
+        number: $number++
+        uid: $uid
+        status: $status
+        type: $type
+        title: $title
 
   return $results
 
