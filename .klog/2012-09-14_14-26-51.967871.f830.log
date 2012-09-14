@@ -1,0 +1,7 @@
+UID: f830
+Type: bug
+Title: firstbits interpreted as exponential
+Added: 2012-09-14_14-26-51.967871
+Status: open
+
+when a firstbit uid is in the format digit, digit, 'e' digit like 44e3 then it is interpreted as exponential number
