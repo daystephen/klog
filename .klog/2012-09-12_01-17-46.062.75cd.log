@@ -1,0 +1,8 @@
+UID: 75cd
+Type: feature
+Title: better memory for local settings
+Added: 2012-09-12_01-17-46.062
+Author: Billy Moon
+Status: open
+
+Instead of entering the name many times, and email address, it should be possible to store it via a settings file. This file should not be tracked from machine to machine, so should be defined in .gitignore.
