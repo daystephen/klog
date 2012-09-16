@@ -48,7 +48,7 @@ switches =
 fs = require 'fs'
 exec = require("child_process").exec
 
-getOpts = ->
+parseArgs = ->
   args = process.argv
   o = {_:[],$0:[]}
   validOptions = []
@@ -113,7 +113,7 @@ pad=`function(e,t,n){n=n||"0",t=t||2;while((""+e).length<t)e=n+e;return e}`
 #
 ###
 
-date = ->
+getDate = ->
   c = new Date()
   return c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate()-5)+"_"+c.toLocaleTimeString().replace(/\D/g,'-')+"."+pad(c.getMilliseconds(),3)
 
@@ -131,13 +131,7 @@ randomUID = (o,t) ->
   #
   #  The values that feed into the filename.
   #
-  exec 'git config --get user.email', (se,so,e) ->
-    $r = generateUID(so)
-    add_with_id o, t, $r
-
-generateUID = ($email) ->
-  console.log 'email'+$email
-  $uid = opts.date+"."+$email
+  $uid = opts.date+"."+opts.args.email
   $uid = md5 $uid
   $uid = $uid.replace /(.{4}).+/, "$1"
 
@@ -239,8 +233,8 @@ editFile = (file) ->
     #  Open the editor
     #
 
-    $editor = argv.editor || process.env.EDITOR || "vim";
-    exec "#{$editor} #{file} &"
+    $editor = opts.args.editor || process.env.EDITOR || "vim";
+    exec "#{$editor} #{file}"
 
 ### 
 # 
@@ -265,11 +259,6 @@ removeClog = ($file) ->
   #  Write the contents, removing any lines matching our marker-pattern
   #
   fs.writeFileSync $file, content
-
-#  Constants
-opts =
-  ext: 'log' # file extension for data files
-  date: date()
 
 ### 
 #
@@ -299,7 +288,7 @@ usage = ->
     Options:
       -e, --editor        - Specify which editor to use.
       -m, --message       - Use the given message rather than spawning an editor.
-      -s, --state         - Restrict matches when searching.
+      -s, --state         - Restrict matches when searching (open/closed).
 
   '''
   exit 0
@@ -380,9 +369,7 @@ cmd_add = (args, type) ->
   #  Make a "random" filename, with the same UID as the content.s
   #
 
-  randomUID args, type
-
-add_with_id = (args, type, $uid) ->
+  $uid = randomUID args
 
   if args.length
     $title = args.join " "
@@ -401,6 +388,7 @@ add_with_id = (args, type, $uid) ->
   Type: #{$type}
   Title: #{$title}
   Added: #{opts.date}
+  Author: #{opts.args.name}
   Status: open\n\n
   """
 
@@ -408,8 +396,8 @@ add_with_id = (args, type, $uid) ->
   #  If we were given a message, add it to the file, and return without
   #  invoking the editor.
   #
-  if argv.message
-    fs.writeFileSync $file, $template + argv.message+ "\n"
+  if opts.args.message
+    fs.writeFileSync $file, $template + opts.args.message+ "\n"
     #
     #  If there is a hook, run it.
     #
@@ -493,10 +481,14 @@ cmd_append = (args) ->
     #
     #  If we were given a message add it, otherwise spawn the editor.
     #
-    if argv.message
-      $out = "\nModified: #{opts.date}\n#{argv.message}\n"
+    if opts.args.message
+      $out = "\nModified: #{opts.date}\n#{opts.args.message}\n"
       fs.appendFileSync '.klog/'+$bug.file, $out
       return
+    else
+      $out = "\nModified: #{opts.date}\n\n"
+      fs.appendFileSync '.klog/'+$bug.file, $out      
+
     #
     #  Allow the user to make the edits.
     #
@@ -617,7 +609,7 @@ cmd_search = (args, $state) ->
   #
   #  The type of the bugs the user is interested in.
   #
-  $type = argv.type || "all"
+  $type = opts.args.type || "all"
 
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
@@ -670,7 +662,7 @@ cmd_search = (args, $state) ->
     #
     # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\n";
     # removed number: ##{$b_number} 
-    print "%#{b}#{$b_uid}#{r} [#{$b_status}] [#{$b_type}] #{$b_title}"
+    print "%#{opts.clrs.green}#{$b_uid}#{opts.clrs.reset} [#{$b_status}] [#{$b_type}] #{$b_title}"
 
 ### 
 # 
@@ -854,10 +846,57 @@ cmd_delete = (args) ->
 cmd_init = ->
   if ! fs.existsSync ".klog"
     fs.mkdirSync ".klog"
+    print "Now you have klogs on!"
     exit 0
   else
-    print "There is already a .klog/ directory present here.\n"
+    print "There is already a .klog/ directory present here"
     exit 1
+
+get_user_details = (callback) ->
+  if opts.args.name && opts.args.email
+    callback()
+  else
+    exec 'git config --get user.email', (se,so,e) ->
+      if so.length
+        opts.args.email = so.replace /\n/, ''
+        exec 'git config --get user.name', (se,so,e) ->
+          if so.length
+            opts.args.name = so.replace /\n/, ''
+          else
+            opts.args.name = opts.args.email.replace /@.+$/, ''
+          callback()
+      else
+        print """
+        Tried to get email address from Git, but could not determine using:
+        \n\tgit config --get user.email\n
+        It might be a good idea to set it with:
+        \n\tgit options etc...\n
+        """
+        print "Please enter your details... (leave blank to abort)"
+        stdin = process.openStdin()
+        process.stdout.write "Name: "
+        stdin.addListener "data", (d) ->
+          if ! opts.args.name && opts.args.name = d.toString().substring(0, d.length-1)
+            process.stdout.write "Email: "
+          else if ! opts.args.email && opts.args.email = d.toString().substring(0, d.length-1)
+            process.stdin.destroy()
+            callback()
+          else
+            print "Error: tried everything, still no name and email!"
+            process.exit 1
+
+get_confirmation = (callback, message) ->
+  stdin = process.openStdin()
+  process.stdout.write "Are you sure? [yes/yep/yeah/y|no/nope/nah/n]:"
+  stdin.addListener "data", (d) ->
+    if d.toString().match /y(e(p|s|ah))?/i    
+      callback()
+      process.stdin.destroy()
+    else
+      if message
+        print message
+      process.stdin.destroy()
+      process.exit 1
 
 ###
 #
@@ -868,7 +907,9 @@ cmd_init = ->
 #
 #  Globals
 #
-argv = ''
+opts =
+  ext: 'log' # file extension for data files
+  date: getDate()
 
 main = ->
 
@@ -877,12 +918,12 @@ main = ->
   # Parse the command line options.
   # 
   ###
-  argv = getOpts()
+  opts.args = parseArgs()
   
-  if argv.debug
-    print argv
+  if opts.args.debug
+    print opts.args
     
-  if argv.exit
+  if opts.args.exit
     process.exit 0    
 
   # user = ''
@@ -897,106 +938,118 @@ main = ->
   #  Ensure we received an argument.
   #
 
-  if argv.help || ! argv._.length
+  if opts.args.help || ! opts.args._.length
     usage()
     process.exit 1
   else
-    $cmd = argv._.shift()
-    $args = argv._
+    opts.cmd = opts.args._.shift()
 
   #
   #  Decide what to do, based upon the command given.
   #
-  if $cmd.match /^init$/i
+  if opts.cmd.match /^init$/i
 
     #
     #  Initialise.
     #
     cmd_init()
 
-  else if $cmd.match /^add$/i
+  else if opts.cmd.match /^add$/i
 
     #
     #  Add a bug.
     #
-    cmd_add $args, argv.type
 
-  else if $cmd.match /^append$/i
+    get_user_details -> cmd_add opts.args._, opts.args.type, opts.args.email
+
+
+  else if opts.cmd.match /^append$/i
 
     #
     #  Append a section of text to an existing bug report.
     #
-    cmd_append $args
+    get_user_details -> cmd_append opts.args._
 
-  else if $cmd.match /^html$/i
+  else if opts.cmd.match /^html$/i
 
     #
     #  Output bugs as a simple HTML page.
     #
-    cmd_html $args
+    cmd_html opts.args._
 
-  else if $cmd.match /^(list|search)$/i
+  else if opts.cmd.match /^(list|search)$/i
 
     #
     #  Find bugs.
     #
-    cmd_search $args
+    if opts.args.state
+      cmd_search opts.args._, opts.args.state
+    else
+      cmd_search opts.args._, opts.args.state
 
-  else if $cmd.match /^open$/i
+  else if opts.cmd.match /^open$/i
 
     #
     #  List only open bugs.
     #
-    cmd_search $args, 'open'
+    cmd_search opts.args._, 'open'
 
-  else if $cmd.match /^closed$/i
+  else if opts.cmd.match /^closed$/i
 
     #
     #  List only closed bugs.
     #
-    cmd_search $args, 'closed'
+    cmd_search opts.args._, 'closed'
 
-  else if $cmd.match /^view$/i
+  else if opts.cmd.match /^view$/i
 
     #
     #  View a single bug.
     #
-    cmd_view $args
+    cmd_view opts.args._
 
-  else if $cmd.match /^close$/i
+  else if opts.cmd.match /^close$/i
 
     #
     #  Mark a bug as closed.
     #
-    cmd_close $args
+    cmd_close opts.args._
 
-  else if $cmd.match /^reopen$/i
+  else if opts.cmd.match /^reopen$/i
 
     #
     #  Mark a bug as open.
     #
-    cmd_reopen $args
+    cmd_reopen opts.args._
 
-  else if $cmd.match /^edit$/i
+  else if opts.cmd.match /^edit$/i
 
     #
     #  Edit a bug.
     #
-    cmd_edit $args
+    cmd_edit opts.args._
 
-  else if $cmd.match /^delete$/i
+  else if opts.cmd.match /^delete$/i
 
     #
     #  Delete a bug.
     #
-    cmd_delete $args
+
+    cmd_view opts.args._
+    print "About to delete this bug..."
+    get_confirmation ->
+      cmd_delete opts.args._
+    , "Phew, that was close!"
 
   else
     usage()
 
-b = ''; r = ''
-exec "tput setaf 2", (se,so,e) ->
-  b = so
-  exec "tput sgr0", (se,so,e) ->
-    r = so
-    main()
+opts.clrs = {}
+
+exec "tput setaf 1", (se,so,e) ->
+  opts.clrs.red = so
+  exec "tput setaf 2", (se,so,e) ->
+    opts.clrs.green = so
+    exec "tput sgr0", (se,so,e) ->
+      opts.clrs.reset = so
+      main()
