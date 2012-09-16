@@ -1,6 +1,6 @@
 ## NAME
 
-klog - A simple distributed bug tracking system.
+klog - A simple distributed bug tracking system and time management tool
 
 ## ABOUT
 
@@ -9,18 +9,25 @@ inside projects, and merged in along with all other changes in exactly the
 way that a user of a distributed revision control system would expect.
 
 In short a project will have any and all bugs stored beneath the **.klog**
-directory.  These bugs will be stored in random, but hostname-sepcific,
-filename such that multiple people merging and commiting will be unlikely
-to ever see conflicts.
+directory.  These issues will be stored using a hash of the user's details and
+the exact time (microsecond precise) of the issue being created such that
+multiple people merging and commiting will be unlikely to ever see conflicts.
 
-Any project may have bugs in two states:
+Issues always have one of two states:
 
-* Open.
-* Closed.
+* Open
+* Closed
 
-Each bug will have an associated UID and number.  The UID associated with
-a bug will be unchanged and fixed at the time it is created, but the number
-is a purely local convience.
+They will also have a type:
+
+* Bug
+* Feature
+* Enhancement
+* Etc...
+
+Each bug will have an associated UID, which is derived form the first bits of a
+hash of the user details (optained form git or command line) and the exact
+moment the issue is generated.
 
 ## USING IT
 
@@ -31,7 +38,8 @@ Usage of klog is divided into several distinct cases:
 * Searching for bugs.
 * Viewing a specific bug.
 * Updating a bug, or appending to an existing bug report.
-* Closing or re-opening a bug.,
+* Closing or re-opening a bug.
+* Deleting a bug (only for mistakes, necessary when it can be closed)
 
 These actions all work in a consistent manner, to avoid unpleasant suprises.
 
@@ -58,22 +66,22 @@ Once a bug report has been created you should find that it is visible in the
 output of "klog list" or "klog open".  In both cases you'll see output which
 looks something like this:
 
-    N:0001 [closed] testing me
-    N:0002 [closed] This is atest
-    N:0003 [  open] This is my bug title
+    %edda [closed] [bug] testing me
+    %e45c [closed] [feature] This is atest
+    %22af [open] [bug] This is my bug title
 
-This listing report shows three things:  The number of the bug, the state
-of the bug ("open" vs. "closed") and the title of the bug.
+This listing report shows several things:  The unique id of the issue, the state
+of the issue ("open" vs. "closed"), the type of issue (bug/feature/etc...) and the title of the issue.
 
 Each of the operations that is specific to a single bug report will allow you
 to specify the number of the bug.  For example if you wished to update the
 last bug, to append some text to it, you could run:
 
-    klog append 3
+    klog append edda
 
 Similarly you could close the bug by running:
 
-    klog close 3
+    klog close 22af
 
 Note that to close a bug you do not need to give a justification, or add
 any content.  A bug may go from freshly opened to closed with no need for
@@ -83,7 +91,8 @@ further updates.
 
 Internally each bug is stored in a file, beneath the **.klog** directory.
 
-Each bug file has a random name which is designed to avoid potential collisions
+Each bug file has a random name (first bits of a hash including user details,
+and exact time of generation) which is designed to avoid potential collisions
 if a repository is shared between many users, upon different systems, as is
 common with distributed revision controls.
 
@@ -91,23 +100,16 @@ Each bug report will have several fixed fields at the beginning, as this
 example shows:
 
     Title: This is atest
-    UID: 1269990083.P10668M151020.birthday.my.flat
-    Added: Wed Mar 31 00:01:23 2010
+    UID: ed46
+    Added: Sun sept 16 22:45:42 2012
     Status: open
 
-    I like pies, but I have none.
+    I like klogs, but I have none.
 
 The UID is essentially random, but should be unique, and is the portable
-sane way to refer to bugs.  When running **klog list** you'll see a number
-reported next to each bug, but this number is valid only for the local system
-and may change when new bugs are reported.
-
-In short you may use the displayed "bug number" for carrying out local
-operations providing you realise that the number associated with a specific
-bug will change over time.  By contrast the UID will never change, so you
-may always run a command like this:
-
-    klog view 1270024997.P15442M277230.birthday.my.flat
+sane way to refer to bugs.  When running **klog list** you'll see the UID
+lsited along with the other details of the bug. This should be the only
+reference used to identify bugs.
 
 ## CUSTOMIZATION
 
@@ -121,10 +123,48 @@ when new bugs are added, bugs are closed, or comments are updated.
 
 The hook will be invoked with two arguments, the first will be a string
 defining the action which has caused the invocation, the second will be
-the name of the bug file.  For example you might use this to auto-add
+the UID of the bug file.  For example you might use this to auto-add
 new bug reports to the repository with a hook like this:
 
     #!/bin/sh
     if [ "$1" = "add" ]; then
-        hg add "$2"
+        git add "$2"
     fi
+
+## PLANS
+
+There are many ideas in the pipeline to develop this project further, but
+nothing is yet set in stone. The goals currently, are to maintain flexibility,
+remove dependencies, develop feature rich command line interface, and
+allow tight integration with distributed version control systems.
+
+## We eat our own dog-food!
+
+Here is a list generated by klog itself, for the current issue list of the
+klog project:
+
+    %f06e [open] [bug] editor runs as background process
+    %25c3 [open] [bug] process does not wait for editor
+    %dc9b [open] [feature] work calculator
+    %590b [open] [feature] generate html and flot data
+    %96ba [open] [feature] messages input unquoted
+    %862e [open] [feature] reduce necessary flags and options
+    %0a8f [open] [feature] possible firm input commands
+    %16d6 [open] [feature] confirmation for delete
+    %c86c [open] [feature] simple gui interface
+    %5c5a [open] [feature] only edit messages and not header
+    %2918 [open] [feature] validate all input
+    %c4c8 [open] [feature] add email address of the author
+    %2136 [open] [feature] port to nodejs and php
+    %c8b6 [open] [feature] include klog binary in the .klog directory
+    %b35f [open] [feature] create server interface
+    %deb0 [open] [feature] seperate source into concatable files
+    %5408 [open] [feature] optimize web interface for phones
+    %0d02 [open] [feature] optimize html reports for printing
+    %66e9 [open] [feature] use gitub style tags
+    %6b91 [open] [feature] add asignee to head
+    %353a [open] [feature] add priority
+    %e4e2 [open] [feature] allow comments on issues
+    %4e02 [open] [enhance] remove repeating code for hook
+    %9c2e [open] [feature] add attachments to issues
+    %f830 [open] [bug] firstbits interpreted as exponential
