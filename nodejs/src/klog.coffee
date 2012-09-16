@@ -29,55 +29,70 @@
 ###
 
 #
-#  Modules
+#  Command line options
 #
-fs = require 'fs'
-exec = require("child_process").exec
-
 options = 
   s:'state'
   m:'message'
   e:'editor'
   t:'type'
 
-args = process.argv
-o = {_:[],$0:[]}
-validOptions = []
+# simple toggels, don't consume next argument
+switches =
+  d:'debug'
+  x:'exit'
 
-for k, v of options
-  validOptions.push v
+#
+#  Modules
+#
+fs = require 'fs'
+exec = require("child_process").exec
 
-i = -2
-na = false # next argument: false/opt/flag
+getOpts = ->
+  args = process.argv
+  o = {_:[],$0:[]}
+  validOptions = []
 
-for arg in args
-  if m = arg.match /^--(.+?)(=(.+))?$/
-    na = m[1]
-    o[m[1]] = m[3] || true
-  else if m = arg.match /^-(.+)/
-    na = options[m[1]]
-    o[na] = true
-    if !na
-      console.log 'Unknown flag: '+m[1]
-      process.exit 1
-  else if ++i > 0 # ignore first two args which are node and app
-    if na == 'message'
-      o.message = [arg]
-    else if na != false
-      o[na] = arg
-    else
-      if o.message
-        o.message.push arg
+  for k, v of options
+    validOptions.push v
+
+  i = -2
+  na = false # next argument: false/opt/flag
+
+  for arg in args
+    if m = arg.match /^--(.+?)(=(.+))?$/
+      na = m[1]
+      o[m[1]] = m[3] || true
+    else if m = arg.match /^-(.+?)(=(.+))?$/
+      if na = options[m[1]]
+        if na == 'message'
+          o[na] = m[3] ? [m[3]] | ['']
+        else
+          o[na] = m[3] || true
+      else if switches[m[1]]
+        na = false
+        o[switches[m[1]]] = m[3] || true
       else
-        o._.push arg
-    na = false
-  else
-    o['$0'].push arg
+        console.log 'Unknown flag: '+m[1]
+        process.exit 1
+    else if ++i > 0 # ignore first two args which are node and app
+      if na == 'message'
+        o.message = [arg]
+      else if na != false
+        o[na] = arg
+      else
+        if o.message
+          o.message.push arg
+        else
+          o._.push arg
+      na = false
+    else
+      o['$0'].push arg
 
-if o.message
-  o.message = o.message.join ' '
+  if o.message
+    o.message = o.message.join ' '
 
-argv = o
+  return o
 
 ###
 #
@@ -256,41 +271,6 @@ opts =
   ext: 'log' # file extension for data files
   date: date()
 
-###
-#
-# Parse the command line options.
-# 
-###
-
-parseCommandLineArguments = ->
-  if argv.help
-    usage()
-###  #
-  #  Parse options.
-  #
-  if (
-      !GetOptions(
-
-          # Help options
-          "help",    \$HELP,
-          "verbose", \$CONFIG{ 'verbose' }, # only used when creating init directory
-
-          # Type of bug (feature / bug / task / etc...)
-          "type=s", \$CONFIG{ 'type' },
-
-          # Editor & message.
-          "editor=s",  \$CONFIG{ 'editor' },
-          "message=s", \$CONFIG{ 'message' },
-
-          # state, used for search/list
-          "state=s",  \$CONFIG{ 'state' }
-      ) )
-  {
-      exit;
-  }
-  usage() if HELP;
-###
-
 ### 
 #
 # Show the usage of this script and exit.
@@ -324,10 +304,6 @@ usage = ->
   '''
   exit 0
 
-#
-#  Parse any command line options.
-#
-parseCommandLineArguments()
 
 #  Custom Modules
 
@@ -512,8 +488,7 @@ cmd_append = (args) ->
     #
     #  Get the bug
     #
-    $bug = getBugByUIDORNumber $args[0]
-    print $bug
+    $bug = getBugByUIDORNumber args[0]
 
     #
     #  If we were given a message add it, otherwise spawn the editor.
@@ -694,7 +669,8 @@ cmd_search = (args, $state) ->
     #  Otherwise show a summary of the bug.
     #
     # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\n";
-    print "##{$b_number} #{$b_uid} [#{$b_status}] [#{$b_type}] #{$b_title}"
+    # removed number: ##{$b_number} 
+    print "%#{b}#{$b_uid}#{r} [#{$b_status}] [#{$b_type}] #{$b_title}"
 
 ### 
 # 
@@ -883,106 +859,144 @@ cmd_init = ->
     print "There is already a .klog/ directory present here.\n"
     exit 1
 
+###
 #
-#  Ensure we received an argument.
+# The main routine ************************************************************************************************
 #
-if ! argv._.length
-  usage()
-else
-  $cmd = argv._.shift()
-  $args = argv._
+###
 
 #
-#  Decide what to do, based upon the command given.
+#  Globals
 #
-if $cmd.match /^init$/i
+argv = ''
+
+main = ->
+
+  ###
+  #
+  # Parse the command line options.
+  # 
+  ###
+  argv = getOpts()
+  
+  if argv.debug
+    print argv
+    
+  if argv.exit
+    process.exit 0    
+
+  # user = ''
+  # email = ''
+
+  # exec 'git config --get user.email', (se,so,e) ->
+  #   email = so.replace /\n/, ''
+  #   exec 'git config --get user.name', (se,so,e) ->
+  #     user = so.replace /\n/, ''
 
   #
-  #  Initialise.
+  #  Ensure we received an argument.
   #
-  cmd_init()
-  exit 0
 
-else if $cmd.match /^add$/i
-
-  #
-  #  Add a bug.
-  #
-  cmd_add $args, argv.type
-  exit 0
-else if $cmd.match /^append$/i
+  if argv.help || ! argv._.length
+    usage()
+    process.exit 1
+  else
+    $cmd = argv._.shift()
+    $args = argv._
 
   #
-  #  Append a section of text to an existing bug report.
+  #  Decide what to do, based upon the command given.
   #
-  cmd_append $args
-  exit 0
-else if $cmd.match /^html$/i
+  if $cmd.match /^init$/i
 
-  #
-  #  Output bugs as a simple HTML page.
-  #
-  cmd_html $args
-  exit 0
-else if $cmd.match /^(list|search)$/i
+    #
+    #  Initialise.
+    #
+    cmd_init()
 
-  #
-  #  Find bugs.
-  #
-  cmd_search $args
-  exit 0
-else if $cmd.match /^open$/i
+  else if $cmd.match /^add$/i
 
-  #
-  #  List only open bugs.
-  #
-  cmd_search $args, 'open'
-  exit 0
-else if $cmd.match /^closed$/i
+    #
+    #  Add a bug.
+    #
+    cmd_add $args, argv.type
 
-  #
-  #  List only closed bugs.
-  #
-  cmd_search $args, 'closed'
-  exit 0
-else if $cmd.match /^view$/i
+  else if $cmd.match /^append$/i
 
-  #
-  #  View a single bug.
-  #
-  cmd_view $args
-  exit 0
-else if $cmd.match /^close$/i
+    #
+    #  Append a section of text to an existing bug report.
+    #
+    cmd_append $args
 
-  #
-  #  Mark a bug as closed.
-  #
-  cmd_close $args
-  exit 0
-else if $cmd.match /^reopen$/i
+  else if $cmd.match /^html$/i
 
-  #
-  #  Mark a bug as open.
-  #
-  cmd_reopen $args
-  exit 0
-else if $cmd.match /^edit$/i
+    #
+    #  Output bugs as a simple HTML page.
+    #
+    cmd_html $args
 
-  #
-  #  Edit a bug.
-  #
-  cmd_edit $args
-  exit 0
-else if $cmd.match /^delete$/i
+  else if $cmd.match /^(list|search)$/i
 
-  #
-  #  Delete a bug.
-  #
-  cmd_delete $args
-  exit 0
-else
-  usage()
+    #
+    #  Find bugs.
+    #
+    cmd_search $args
 
+  else if $cmd.match /^open$/i
 
+    #
+    #  List only open bugs.
+    #
+    cmd_search $args, 'open'
 
-#exit 0
+  else if $cmd.match /^closed$/i
+
+    #
+    #  List only closed bugs.
+    #
+    cmd_search $args, 'closed'
+
+  else if $cmd.match /^view$/i
+
+    #
+    #  View a single bug.
+    #
+    cmd_view $args
+
+  else if $cmd.match /^close$/i
+
+    #
+    #  Mark a bug as closed.
+    #
+    cmd_close $args
+
+  else if $cmd.match /^reopen$/i
+
+    #
+    #  Mark a bug as open.
+    #
+    cmd_reopen $args
+
+  else if $cmd.match /^edit$/i
+
+    #
+    #  Edit a bug.
+    #
+    cmd_edit $args
+
+  else if $cmd.match /^delete$/i
+
+    #
+    #  Delete a bug.
+    #
+    cmd_delete $args
+
+  else
+    usage()
+
+b = ''; r = ''
+exec "tput setaf 2", (se,so,e) ->
+  b = so
+  exec "tput sgr0", (se,so,e) ->
+    r = so
+    main()
