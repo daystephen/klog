@@ -57,18 +57,16 @@ html
           a(href="https://github.com/billymoon/klog").button.blue GitHub : billymoon/klog
         li: a(href="https://github.com/billymoon/klog/zipball/master").button Download ZIP File
         li: a(href="https://github.com/billymoon/klog/tarball/master").button Download TAR Ball
-        //- li: a(href="https://github.com/billymoon/klog").button View On GitHub
+        li: a(href="https://npmjs.org/package/klog").button npm page
 
       h3 Installation
 
-      p currently klog is available as a perl script, which you can download and either package with your project (to ensure all members can use it), or install on your system.
+      p klog is a node.js app, written in javascript (actually coffee-script) so is available via npm.
 
-      p.silver: i we are planning to port it to nodejs soon, so it will be available via npm.
+      p.silver i it is worth putting the `-g` on there so the binary (`klog`) becomes available after install!
 
       :code
-        $ git clone https://github.com/billymoon/klog
-
-        $ ln -s ~/path/to/klog /usr/local/bin
+        $ npm install klog -g
       h3 Basic usage
 
       p klog is designed to make your issue tracking easier by having a simple command line interface
@@ -81,13 +79,14 @@ html
         $ klog add IE6 not rendering page correctly -m "ie6 needs special treatment to render the page correctly"
         
         $ klog list
-        #1   a6a0 [open]   [bug]     IE6 not rendering page correctly
+        %a6a0 [open] [bug] IE6 not rendering page correctly
 
         $ klog view a6a0
         UID: a6a0
         Type: bug
         Title: IE6 not rendering page correctly
-        Added: 2012-09-12_22-09-13.966296
+        Added: 2012-09-12_22-09-13.966
+        Author: Billy Moon
         Status: open
 
         ie6 needs special treatment to render the page correctly
@@ -107,7 +106,7 @@ html
 
       #foot
         block foot
-          p.silver: i this project is very much in it's early stages and should be considered a development project, not yet fit for production.
+          p.silver: i this project is very much in it's early stages and should be considered a development project, not yet fit for production. watch out for version 1.0.0!
 
     :coffeescript
       $ ->
