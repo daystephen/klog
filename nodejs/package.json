@@ -14,7 +14,7 @@
     "klog",
     "clog"
   ],
-  "version": "0.4.1",
+  "version": "0.4.2",
   "homepage": "http://billymoon.github.com/klog/",
   "repository": {
     "type": "git",
@@ -37,6 +37,6 @@
     "klog": "./bin/klog"
   },
   "bugs": "https://github.com/billymoon/klog/issues",
-  "_id": "klog@0.4.1",
+  "_id": "klog@0.4.2",
   "_from": "klog"
 }
