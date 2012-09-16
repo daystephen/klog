@@ -887,7 +887,7 @@ get_user_details = (callback) ->
 
 get_confirmation = (callback, message) ->
   stdin = process.openStdin()
-  process.stdout.write "Are you sure? [yes/yep/yeah/y|no/nope/nah/n]:"
+  process.stdout.write "Are you sure? [yes/yep/yeah/y|no/nope/nah/n]: "
   stdin.addListener "data", (d) ->
     if d.toString().match /y(e(p|s|ah))?/i    
       callback()
