@@ -288,7 +288,7 @@ usage = ->
     Options:
       -e, --editor        - Specify which editor to use.
       -m, --message       - Use the given message rather than spawning an editor.
-      -s, --state         - Restrict matches when searching.
+      -s, --state         - Restrict matches when searching (open/closed).
 
   '''
   exit 0
@@ -609,7 +609,7 @@ cmd_search = (args, $state) ->
   #
   #  The type of the bugs the user is interested in.
   #
-  $type = argv.type || "all"
+  $type = opts.args.type || "all"
 
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
@@ -662,7 +662,7 @@ cmd_search = (args, $state) ->
     #
     # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\n";
     # removed number: ##{$b_number} 
-    print "%#{b}#{$b_uid}#{r} [#{$b_status}] [#{$b_type}] #{$b_title}"
+    print "%#{opts.clrs.green}#{$b_uid}#{opts.clrs.reset} [#{$b_status}] [#{$b_type}] #{$b_title}"
 
 ### 
 # 
@@ -846,9 +846,10 @@ cmd_delete = (args) ->
 cmd_init = ->
   if ! fs.existsSync ".klog"
     fs.mkdirSync ".klog"
+    print "Now you have klogs on!"
     exit 0
   else
-    print "There is already a .klog/ directory present here.\n"
+    print "There is already a .klog/ directory present here"
     exit 1
 
 get_user_details = (callback) ->
@@ -883,6 +884,19 @@ get_user_details = (callback) ->
           else
             print "Error: tried everything, still no name and email!"
             process.exit 1
+
+get_confirmation = (callback, message) ->
+  stdin = process.openStdin()
+  process.stdout.write "Are you sure? [yes/yep/yeah/y|no/nope/nah/n]:"
+  stdin.addListener "data", (d) ->
+    if d.toString().match /y(e(p|s|ah))?/i    
+      callback()
+      process.stdin.destroy()
+    else
+      if message
+        print message
+      process.stdin.destroy()
+      process.exit 1
 
 ###
 #
@@ -968,7 +982,10 @@ main = ->
     #
     #  Find bugs.
     #
-    cmd_search opts.args._
+    if opts.args.state
+      cmd_search opts.args._, opts.args.state
+    else
+      cmd_search opts.args._, opts.args.state
 
   else if opts.cmd.match /^open$/i
 
@@ -1017,14 +1034,22 @@ main = ->
     #
     #  Delete a bug.
     #
-    cmd_delete opts.args._
+
+    cmd_view opts.args._
+    print "About to delete this bug..."
+    get_confirmation ->
+      cmd_delete opts.args._
+    , "Phew, that was close!"
 
   else
     usage()
 
-b = ''; r = ''
-exec "tput setaf 2", (se,so,e) ->
-  b = so
-  exec "tput sgr0", (se,so,e) ->
-    r = so
-    main()
+opts.clrs = {}
+
+exec "tput setaf 1", (se,so,e) ->
+  opts.clrs.red = so
+  exec "tput setaf 2", (se,so,e) ->
+    opts.clrs.green = so
+    exec "tput sgr0", (se,so,e) ->
+      opts.clrs.reset = so
+      main()
