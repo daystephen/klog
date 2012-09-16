@@ -233,8 +233,8 @@ editFile = (file) ->
     #  Open the editor
     #
 
-    $editor = argv.editor || process.env.EDITOR || "vim";
-    exec "#{$editor} #{file} &"
+    $editor = opts.args.editor || process.env.EDITOR || "vim";
+    exec "#{$editor} #{file}"
 
 ### 
 # 
@@ -485,6 +485,10 @@ cmd_append = (args) ->
       $out = "\nModified: #{opts.date}\n#{opts.args.message}\n"
       fs.appendFileSync '.klog/'+$bug.file, $out
       return
+    else
+      $out = "\nModified: #{opts.date}\n\n"
+      fs.appendFileSync '.klog/'+$bug.file, $out      
+
     #
     #  Allow the user to make the edits.
     #
@@ -847,6 +851,39 @@ cmd_init = ->
     print "There is already a .klog/ directory present here.\n"
     exit 1
 
+get_user_details = (callback) ->
+  if opts.args.name && opts.args.email
+    callback()
+  else
+    exec 'git config --get user.email', (se,so,e) ->
+      if so.length
+        opts.args.email = so.replace /\n/, ''
+        exec 'git config --get user.name', (se,so,e) ->
+          if so.length
+            opts.args.name = so.replace /\n/, ''
+          else
+            opts.args.name = opts.args.email.replace /@.+$/, ''
+          callback()
+      else
+        print """
+        Tried to get email address from Git, but could not determine using:
+        \n\tgit config --get user.email\n
+        It might be a good idea to set it with:
+        \n\tgit options etc...\n
+        """
+        print "Please enter your details... (leave blank to abort)"
+        stdin = process.openStdin()
+        process.stdout.write "Name: "
+        stdin.addListener "data", (d) ->
+          if ! opts.args.name && opts.args.name = d.toString().substring(0, d.length-1)
+            process.stdout.write "Email: "
+          else if ! opts.args.email && opts.args.email = d.toString().substring(0, d.length-1)
+            process.stdin.destroy()
+            callback()
+          else
+            print "Error: tried everything, still no name and email!"
+            process.exit 1
+
 ###
 #
 # The main routine ************************************************************************************************
@@ -909,47 +946,15 @@ main = ->
     #  Add a bug.
     #
 
-    do_add_bug = ->
-      cmd_add opts.args._, opts.args.type, opts.args.email
+    get_user_details -> cmd_add opts.args._, opts.args.type, opts.args.email
 
-    if opts.args.email
-      do_add_bug()
-    else
-      exec 'git config --get user.email', (se,so,e) ->
-        if so.length
-          opts.args.email = so
-          exec 'git config --get user.email', (se,so,e) ->
-            if so.length
-              opts.args.name = so
-            else
-              opts.args.name = opts.args.email.replace /@.+$/, ''
-            do_add_bug()
-        else
-          print """
-          Tried to get email address from Git, but could not determine using:
-          \n\tgit config --get user.email\n
-          It might be a good idea to set it with:
-          \n\tgit options etc...\n
-          """
-          print "Please enter your details... (leave blank to abort)"
-          stdin = process.openStdin()
-          process.stdout.write "Name: "
-          stdin.addListener "data", (d) ->
-            if ! opts.args.name && opts.args.name = d.toString().substring(0, d.length-1)
-              process.stdout.write "Email: "
-            else if ! opts.args.email && opts.args.email = d.toString().substring(0, d.length-1)
-              process.stdin.destroy()
-              do_add_bug()
-            else
-              print "Error: tried everything, still no name and email!"
-              process.exit 1
 
   else if opts.cmd.match /^append$/i
 
     #
     #  Append a section of text to an existing bug report.
     #
-    cmd_append opts.args._
+    get_user_details -> cmd_append opts.args._
 
   else if opts.cmd.match /^html$/i
 
