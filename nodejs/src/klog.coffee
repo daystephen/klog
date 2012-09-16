@@ -48,7 +48,7 @@ switches =
 fs = require 'fs'
 exec = require("child_process").exec
 
-getOpts = ->
+parseArgs = ->
   args = process.argv
   o = {_:[],$0:[]}
   validOptions = []
@@ -113,7 +113,7 @@ pad=`function(e,t,n){n=n||"0",t=t||2;while((""+e).length<t)e=n+e;return e}`
 #
 ###
 
-date = ->
+getDate = ->
   c = new Date()
   return c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate()-5)+"_"+c.toLocaleTimeString().replace(/\D/g,'-')+"."+pad(c.getMilliseconds(),3)
 
@@ -131,13 +131,7 @@ randomUID = (o,t) ->
   #
   #  The values that feed into the filename.
   #
-  exec 'git config --get user.email', (se,so,e) ->
-    $r = generateUID(so)
-    add_with_id o, t, $r
-
-generateUID = ($email) ->
-  console.log 'email'+$email
-  $uid = opts.date+"."+$email
+  $uid = opts.date+"."+opts.args.email
   $uid = md5 $uid
   $uid = $uid.replace /(.{4}).+/, "$1"
 
@@ -266,11 +260,6 @@ removeClog = ($file) ->
   #
   fs.writeFileSync $file, content
 
-#  Constants
-opts =
-  ext: 'log' # file extension for data files
-  date: date()
-
 ### 
 #
 # Show the usage of this script and exit.
@@ -380,9 +369,7 @@ cmd_add = (args, type) ->
   #  Make a "random" filename, with the same UID as the content.s
   #
 
-  randomUID args, type
-
-add_with_id = (args, type, $uid) ->
+  $uid = randomUID args
 
   if args.length
     $title = args.join " "
@@ -401,6 +388,7 @@ add_with_id = (args, type, $uid) ->
   Type: #{$type}
   Title: #{$title}
   Added: #{opts.date}
+  Author: #{opts.args.name}
   Status: open\n\n
   """
 
@@ -408,8 +396,8 @@ add_with_id = (args, type, $uid) ->
   #  If we were given a message, add it to the file, and return without
   #  invoking the editor.
   #
-  if argv.message
-    fs.writeFileSync $file, $template + argv.message+ "\n"
+  if opts.args.message
+    fs.writeFileSync $file, $template + opts.args.message+ "\n"
     #
     #  If there is a hook, run it.
     #
@@ -493,8 +481,8 @@ cmd_append = (args) ->
     #
     #  If we were given a message add it, otherwise spawn the editor.
     #
-    if argv.message
-      $out = "\nModified: #{opts.date}\n#{argv.message}\n"
+    if opts.args.message
+      $out = "\nModified: #{opts.date}\n#{opts.args.message}\n"
       fs.appendFileSync '.klog/'+$bug.file, $out
       return
     #
@@ -868,7 +856,9 @@ cmd_init = ->
 #
 #  Globals
 #
-argv = ''
+opts =
+  ext: 'log' # file extension for data files
+  date: getDate()
 
 main = ->
 
@@ -877,12 +867,12 @@ main = ->
   # Parse the command line options.
   # 
   ###
-  argv = getOpts()
+  opts.args = parseArgs()
   
-  if argv.debug
-    print argv
+  if opts.args.debug
+    print opts.args
     
-  if argv.exit
+  if opts.args.exit
     process.exit 0    
 
   # user = ''
@@ -897,99 +887,132 @@ main = ->
   #  Ensure we received an argument.
   #
 
-  if argv.help || ! argv._.length
+  if opts.args.help || ! opts.args._.length
     usage()
     process.exit 1
   else
-    $cmd = argv._.shift()
-    $args = argv._
+    opts.cmd = opts.args._.shift()
 
   #
   #  Decide what to do, based upon the command given.
   #
-  if $cmd.match /^init$/i
+  if opts.cmd.match /^init$/i
 
     #
     #  Initialise.
     #
     cmd_init()
 
-  else if $cmd.match /^add$/i
+  else if opts.cmd.match /^add$/i
 
     #
     #  Add a bug.
     #
-    cmd_add $args, argv.type
 
-  else if $cmd.match /^append$/i
+    do_add_bug = ->
+      cmd_add opts.args._, opts.args.type, opts.args.email
+
+    if opts.args.email
+      do_add_bug()
+    else
+      exec 'git config --get user.email', (se,so,e) ->
+        if so.length
+          opts.args.email = so
+          exec 'git config --get user.email', (se,so,e) ->
+            if so.length
+              opts.args.name = so
+            else
+              opts.args.name = opts.args.email.replace /@.+$/, ''
+            do_add_bug()
+        else
+          print """
+          Tried to get email address from Git, but could not determine using:
+          \n\tgit config --get user.email\n
+          It might be a good idea to set it with:
+          \n\tgit options etc...\n
+          """
+          print "Please enter your details... (leave blank to abort)"
+          stdin = process.openStdin()
+          process.stdout.write "Name: "
+          stdin.addListener "data", (d) ->
+            if ! opts.args.name && opts.args.name = d.toString().substring(0, d.length-1)
+              process.stdout.write "Email: "
+            else if ! opts.args.email && opts.args.email = d.toString().substring(0, d.length-1)
+              process.stdin.destroy()
+              do_add_bug()
+            else
+              print "Error: tried everything, still no name and email!"
+              process.exit 1
+
+  else if opts.cmd.match /^append$/i
 
     #
     #  Append a section of text to an existing bug report.
     #
-    cmd_append $args
+    cmd_append opts.args._
 
-  else if $cmd.match /^html$/i
+  else if opts.cmd.match /^html$/i
 
     #
     #  Output bugs as a simple HTML page.
     #
-    cmd_html $args
+    cmd_html opts.args._
 
-  else if $cmd.match /^(list|search)$/i
+  else if opts.cmd.match /^(list|search)$/i
 
     #
     #  Find bugs.
     #
-    cmd_search $args
+    cmd_search opts.args._
 
-  else if $cmd.match /^open$/i
+  else if opts.cmd.match /^open$/i
 
     #
     #  List only open bugs.
     #
-    cmd_search $args, 'open'
+    cmd_search opts.args._, 'open'
 
-  else if $cmd.match /^closed$/i
+  else if opts.cmd.match /^closed$/i
 
     #
     #  List only closed bugs.
     #
-    cmd_search $args, 'closed'
+    cmd_search opts.args._, 'closed'
 
-  else if $cmd.match /^view$/i
+  else if opts.cmd.match /^view$/i
 
     #
     #  View a single bug.
     #
-    cmd_view $args
+    cmd_view opts.args._
 
-  else if $cmd.match /^close$/i
+  else if opts.cmd.match /^close$/i
 
     #
     #  Mark a bug as closed.
     #
-    cmd_close $args
+    cmd_close opts.args._
 
-  else if $cmd.match /^reopen$/i
+  else if opts.cmd.match /^reopen$/i
 
     #
     #  Mark a bug as open.
     #
-    cmd_reopen $args
+    cmd_reopen opts.args._
 
-  else if $cmd.match /^edit$/i
+  else if opts.cmd.match /^edit$/i
 
     #
     #  Edit a bug.
     #
-    cmd_edit $args
+    cmd_edit opts.args._
 
-  else if $cmd.match /^delete$/i
+  else if opts.cmd.match /^delete$/i
 
     #
     #  Delete a bug.
     #
-    cmd_delete $args
+    cmd_delete opts.args._
 
   else
     usage()
