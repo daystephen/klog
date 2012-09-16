@@ -5,3 +5,7 @@ Added: 2012-09-12_18-44-31.403045
 Status: open
 
 as far as I know, the hook should fire after every add, running a nodejs script that echoes it's arguments. this does not appear to be happening
+
+
+Modified: 2012-09-11_22-53-14.400
+Status: closed
