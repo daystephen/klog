@@ -23,8 +23,7 @@
 # Copyright (c) 2012 by Billy Moon.  All rights reserved.
 # 
 # This module is free software;
-# you can redistribute it and/or modify it under
-# the same terms as Perl itself.
+# you can redistribute it and/or modify it under the MIT license
 # The LICENSE file contains the full text of the license.
 # 
 ###
@@ -34,11 +33,51 @@
 #
 fs = require 'fs'
 exec = require("child_process").exec
-execSync = require('exec-sync')
-argv = require('optimist')
-  .alias('t','type')
-  .alias('m','message')
-  .argv
+
+options = 
+  s:'state'
+  m:'message'
+  e:'editor'
+  t:'type'
+
+args = process.argv
+o = {_:[],$0:[]}
+validOptions = []
+
+for k, v of options
+  validOptions.push v
+
+i = -2
+na = false # next argument: false/opt/flag
+
+for arg in args
+  if m = arg.match /^--(.+?)(=(.+))?$/
+    na = m[1]
+    o[m[1]] = m[3] || true
+  else if m = arg.match /^-(.+)/
+    na = options[m[1]]
+    o[na] = true
+    if !na
+      console.log 'Unknown flag: '+m[1]
+      process.exit 1
+  else if ++i > 0 # ignore first two args which are node and app
+    if na == 'message'
+      o.message = [arg]
+    else if na != false
+      o[na] = arg
+    else
+      if o.message
+        o.message.push arg
+      else
+        o._.push arg
+    na = false
+  else
+    o['$0'].push arg
+
+if o.message
+  o.message = o.message.join ' '
+
+argv = o
 
 ###
 #
@@ -73,17 +112,21 @@ date = ->
 # 
 # 
 ###
+randomUID = (o,t) ->
+  #
+  #  The values that feed into the filename.
+  #
+  exec 'git config --get user.email', (se,so,e) ->
+    $r = generateUID(so)
+    add_with_id o, t, $r
 
-randomUID = ->
-    #
-    #  The values that feed into the filename.
-    #
-    $email = execSync 'git config --get user.email'
-    $uid = opts.date+"."+$email
-    $uid = md5 $uid
-    $uid = $uid.replace /(.{4}).+/, "$1"
+generateUID = ($email) ->
+  console.log 'email'+$email
+  $uid = opts.date+"."+$email
+  $uid = md5 $uid
+  $uid = $uid.replace /(.{4}).+/, "$1"
 
-    return $uid
+  return $uid
 
 ### 
 # 
@@ -91,7 +134,6 @@ randomUID = ->
 # 
 ###
 getBugs = ->
-  #files = execSync "ls .klog/*.#{opts.ext}"
   files = fs.readdirSync '.klog/'
   files.sort()
   $results = []
@@ -167,7 +209,7 @@ getBugByUIDORNumber = ($arg) ->
 #
 
 exit = (code) ->
-  process.exit code
+  #process.exit code
 
 ### 
 # 
@@ -182,8 +224,8 @@ editFile = (file) ->
     #  Open the editor
     #
 
-    # $editor = $CONFIG{ 'editor' } || $ENV{ 'EDITOR' } || "vim";
-    execSync "sub #{file}"
+    $editor = argv.editor || process.env.EDITOR || "vim";
+    exec "#{$editor} #{file} &"
 
 ### 
 # 
@@ -358,18 +400,20 @@ changeBugState = ($value, $state) ->
 ###
 cmd_add = (args, type) ->
 
+  #
+  #  Make a "random" filename, with the same UID as the content.s
+  #
+
+  randomUID args, type
+
+add_with_id = (args, type, $uid) ->
+
   if args.length
     $title = args.join " "
   else
     $title = "Untitled bug report"
 
   $type = type || 'bug'
-
-  #
-  #  Make a "random" filename, with the same UID as the content.s
-  #
-
-  $uid  = randomUID()
 
   $file = ".klog/#{opts.date}.#{$uid}.log";
 
@@ -939,4 +983,6 @@ else if $cmd.match /^delete$/i
 else
   usage()
 
-exit 0
+
+
+#exit 0
