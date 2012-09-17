@@ -1,0 +1,8 @@
+UID: 67f2
+Type: feature
+Title: ascend until found .klog, and use that
+Added: 2012-09-12_13-15-52.196
+Author: Billy Moon
+Status: open
+
+currently all commands have to be issued from within the initialized directory, which is not handy on a project wide tracking system. It should work like git.
