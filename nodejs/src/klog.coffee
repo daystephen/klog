@@ -74,7 +74,7 @@ parseArgs = ->
         o[switches[m[1]]] = m[3] || true
       else
         console.log 'Unknown flag: '+m[1]
-        process.exit 1
+        exit 1
     else if ++i > 0 # ignore first two args which are node and app
       if na == 'message'
         o.message = [arg]
@@ -222,7 +222,8 @@ getBugByUIDORNumber = ($arg) ->
 #
 
 exit = (code) ->
-  #process.exit code
+  print "EXIT ~ with code: "+code
+  process.exit code
 
 ### 
 # 
@@ -887,7 +888,7 @@ get_user_details = (callback) ->
             callback()
           else
             print "Error: tried everything, still no name and email!"
-            process.exit 1
+            exit 1
 
 get_confirmation = (callback, message) ->
   stdin = process.openStdin()
@@ -900,7 +901,7 @@ get_confirmation = (callback, message) ->
       if message
         print message
       process.stdin.destroy()
-      process.exit 1
+      exit 1
 
 ###
 #
@@ -928,7 +929,7 @@ main = ->
     print opts.args
     
   if opts.args.exit
-    process.exit 0    
+    exit 0    
 
   # user = ''
   # email = ''
@@ -944,7 +945,7 @@ main = ->
 
   if opts.args.help || ! opts.args._.length
     usage()
-    process.exit 1
+    exit 1
   else
     opts.cmd = opts.args._.shift()
 
