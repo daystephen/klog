@@ -668,7 +668,8 @@ cmd_search = (args, $state) ->
     #
     # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\n";
     # removed number: ##{$b_number} 
-    print "%#{opts.clrs.green}#{$b_uid}#{opts.clrs.reset} [#{$b_status}] [#{$b_type}] #{$b_title}"
+    hl = if $b_status == 'open' then opts.clrs.green else opts.clrs.red
+    print "%#{hl}#{$b_uid}#{opts.clrs.reset} [#{$b_status}] [#{$b_type}] #{$b_title}"
 
 ### 
 # 
