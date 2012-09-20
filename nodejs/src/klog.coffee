@@ -143,7 +143,7 @@ randomUID = (o,t) ->
 # 
 ###
 getBugs = ->
-  files = fs.readdirSync '.klog/'
+  files = fs.readdirSync opts.store
   files.sort()
   $results = []
   $number = 1
@@ -350,7 +350,7 @@ changeBugState = ($value, $state) ->
   Status: #{$state}\n
   """
 
-  fs.appendFileSync '.klog/'+$bug.file, content
+  fs.appendFileSync opts.store+$bug.file, content
 
   #
   #  If there is a hook, run it.
@@ -383,7 +383,7 @@ cmd_add = (args, type) ->
 
   $type = type || 'bug'
 
-  $file = ".klog/#{opts.date}.#{$uid}.log";
+  opts.args.file = opts.store+"#{opts.date}.#{$uid}.log";
 
   #
   #  Write our template to it
@@ -402,11 +402,11 @@ cmd_add = (args, type) ->
   #  invoking the editor.
   #
   if opts.args.message
-    fs.writeFileSync $file, $template + opts.args.message+ "\n"
+    fs.writeFileSync opts.args.file, opts.args.template + opts.args.message+ "\n"
     #
     #  If there is a hook, run it.
     #
-    hook "add", $file
+    hook "add", opts.args.file
     return
   #
   #  Otherwise add the default text, and show it in an editor.
@@ -422,12 +422,12 @@ cmd_add = (args, type) ->
     # klog:\n
     """
 
-    fs.writeFileSync $file, $template
+    fs.writeFileSync opts.args.file, $template
 
     #
     #  Open the file in the users' editor.
     #
-    editFile $file
+    editFile opts.args.file
 
     ### one day we could use a bug template file
     if ( -e ".klog/new-bug-template" )
@@ -442,15 +442,15 @@ cmd_add = (args, type) ->
     }
     ###
 
-  #
-  #  Once it was saved remove the lines that mention "# klog: "
-  #
-  removeClog $file
+    #
+    #  Once it was saved remove the lines that mention "# klog: "
+    #
+    removeClog opts.args.file
 
-  #
-  #  If there is a hook, run it.
-  #
-  hook "add", $file
+    #
+    #  If there is a hook, run it.
+    #
+    hook "add", opts.args.file
 
 ### 
 # Open an editor with a new block appended to the end of the file.
@@ -488,21 +488,21 @@ cmd_append = (args) ->
     #
     if opts.args.message
       $out = "\nModified: #{opts.date}\n#{opts.args.message}\n"
-      fs.appendFileSync '.klog/'+$bug.file, $out
+      fs.appendFileSync opts.store+$bug.file, $out
       return
     else
       $out = "\nModified: #{opts.date}\n\n"
-      fs.appendFileSync '.klog/'+$bug.file, $out      
+      fs.appendFileSync opts.store+$bug.file, $out      
 
     #
     #  Allow the user to make the edits.
     #
-    editFile ".klog/"+$bug.file
+    editFile opts.store+$bug.file
 
     #
     #  Once it was saved remove the lines that mention "# klog: "
     #
-    removeClog ".klog/"+$bug.file
+    removeClog opts.store+$bug.file
 
     #
     #  If there is a hook, run it.
@@ -707,7 +707,7 @@ cmd_view = (args) ->
   #
   #  Show it to the console
   #
-  buffer = fs.readFileSync '.klog/' + $bug.file
+  buffer = fs.readFileSync opts.store + $bug.file
   print buffer.toString()
 
 
@@ -796,7 +796,7 @@ cmd_edit = (args) ->
   #
   #  Edit the file the bug is stored in.
   #
-  editFile '.klog/'+$bug.file
+  editFile opts.store+$bug.file
 
   #
   #  If there is a hook, run it.
@@ -836,7 +836,7 @@ cmd_delete = (args) ->
     #  Delete the file the bug is stored in.
     #
     $file = $bug.file
-    fs.unlinkSync '.klog/'+$file
+    fs.unlinkSync opts.store+$file
 
     #
     #  If there is a hook, run it.
@@ -849,8 +849,16 @@ cmd_delete = (args) ->
 # 
 ###
 cmd_init = ->
-  if ! fs.existsSync ".klog"
-    fs.mkdirSync ".klog"
+  if ! fs.existsSync opts.store
+    fs.mkdirSync opts.store
+    fs.writeFileSync "#{opts.store}.gitignore","local"
+    fs.mkdirSync "#{opts.store}local"
+    fs.writeFileSync "#{opts.store}local/settings.json","""
+    {
+      "user":"John Doe",
+      "email":"john@thedoughfactory.com"
+    }
+    """
     print "Now you have klogs on!"
     exit 0
   else
@@ -915,6 +923,7 @@ get_confirmation = (callback, message) ->
 opts =
   ext: 'log' # file extension for data files
   date: getDate()
+  store: '.klog/'
 
 main = ->
 
