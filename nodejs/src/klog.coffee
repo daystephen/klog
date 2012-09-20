@@ -362,6 +362,37 @@ changeBugState = ($value, $state) ->
 #
 #
 
+get_title = (callback)->
+  stdin = process.openStdin()
+  process.stdout.write "Title: "
+  stdin.addListener "data", (d) ->
+    opts.args.title = d.toString().substring(0, d.length-1)
+    process.stdin.destroy()
+    callback()
+
+get_message = (callback)->
+  stdin = process.openStdin()
+  process.stdout.write "Message: "
+  print stdin.addListener "data", (d) ->
+    opts.args.message = d.toString().substring(0, d.length-1)
+    process.stdin.destroy()
+    callback()
+
+write_file = ->
+  fs.writeFileSync opts.args.file, opts.args.template + opts.args.message+ "\n"
+
+get_items = ->
+  if ! opts.args.title
+    get_title get_items
+  else if ! opts.args.message
+    get_message get_items
+  else
+    print "got them all"
+  print opts.args
+
+do_add = ->
+  print "Will add with: "+opts.args
+
 ###
 # Add a new bug.
 # 
@@ -408,6 +439,9 @@ cmd_add = (args, type) ->
     #
     hook "add", opts.args.file
     return
+  else if true
+    get_items()
+
   #
   #  Otherwise add the default text, and show it in an editor.
   #  (ending newline helps in stripping the comments out later)
@@ -913,11 +947,65 @@ get_confirmation = (callback, message) ->
       process.stdin.destroy()
       exit 1
 
+#
+#  parse opts.args and return command object
+#  should validate required options, but not their values
+#
+get_command = ->
+  out = {}
+
+  # valid commands defined as obejct tree
+  commands =
+    add:
+      required: ['title','message']
+      valid: ['type']
+      args: -> opts.args.title = opts.args._.join ' '
+    delete:
+      required: ['id']
+      args: ->
+        if id = opts.args._.shift()
+          opts.args.id = id.replace /^%/, ''
+    help: {}
+    init: {}
+
+  # figure out what the command is, or assign `help`
+  subcommand = opts.args._.shift() || 'help' # if no arguments
+  command = commands[subcommand] || subcommand = 'help' # if invalid argument
+  out.name = subcommand
+
+  # parse remaining arguments according to subcommand
+  if command.args then command.args()    
+
+  # required options
+  if command.required
+    for requirement in command.required
+      if has = opts.args[requirement]
+        out.args = {} unless out.args
+        out.args[requirement] = has
+      else
+        out.needs = [] unless out.needs
+        out.needs.push requirement
+
+  # optional options
+  if command.valid
+    for valid in command.valid
+      if has = opts.args[valid]
+        out.args = {} unless out.args
+        out.args[valid] = has
+
+  return out
+
 ###
 #
 # The main routine ************************************************************************************************
 #
 ###
+
+#
+#  Start reading stdin
+#
+# stdin = process.openStdin()
+# stdin.resume()
 
 #
 #  Globals
@@ -935,6 +1023,14 @@ main = ->
   # 
   ###
   opts.args = parseArgs()
+
+  #
+  # Generate command from arguments
+  #
+  # opts.command = get_command()
+
+  # print opts
+  # exit 0
   
   if opts.args.debug
     print opts.args
