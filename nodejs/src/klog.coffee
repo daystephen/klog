@@ -200,6 +200,10 @@ getBugByUIDORNumber = ($arg) ->
     #
     # If the argument was NNNN then look for that bug number.
     #
+
+    # strip lead bug identifier
+    $arg = $arg.replace /^%/, ''
+    
     if m = $arg.match /^([0-9]{1,3})$/i
       $bug = $possible if parseInt(m[1]) == $possible.number
     else
