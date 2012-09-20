@@ -412,7 +412,8 @@ cmd_add = (args, type) ->
   #  Otherwise add the default text, and show it in an editor.
   #  (ending newline helps in stripping the comments out later)
   else
-    $template += """
+
+    opts.args.template += """
     # klog:
     # klog:  Enter your bug report here; it is better to write too much than
     # klog: too little.
