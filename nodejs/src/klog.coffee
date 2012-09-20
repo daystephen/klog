@@ -388,7 +388,7 @@ cmd_add = (args, type) ->
   #
   #  Write our template to it
   #
-  $template = """
+  opts.args.template = """
   UID: #{$uid}
   Type: #{$type}
   Title: #{$title}
