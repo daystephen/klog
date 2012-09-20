@@ -233,7 +233,7 @@ editFile = (file) ->
     #  Open the editor
     #
 
-    $editor = opts.args.editor || process.env.EDITOR || (process.platform === 'win32' ?  'notepad' : "vim");
+    $editor = opts.args.editor || process.env.EDITOR || (process.platform == 'win32' ?  'notepad' : "vim");
     exec "#{$editor} #{file}"
 
 ### 
