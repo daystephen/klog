@@ -423,7 +423,7 @@ cmd_add = (args, type) ->
     # klog:\n
     """
 
-    fs.writeFileSync opts.args.file, $template
+    fs.writeFileSync opts.args.file, opts.args.template
 
     #
     #  Open the file in the users' editor.
@@ -847,6 +847,59 @@ cmd_delete = (args) ->
 
 ###
 # 
+# Update local settings
+# 
+###
+cmd_setup = ->
+  if typeof opts.args.nameSuggest == 'undefined'
+    exec 'git config --get user.name', (se,so,e)->
+      opts.args.nameSuggest = so.toString().trim()
+      cmd_setup()
+  else if ! opts.args.name
+    suggest = if opts.args.nameSuggest then " [#{opts.args.nameSuggest}]" else ""
+    process.stdout.write "Your name#{suggest}: "
+    stdin = process.openStdin()
+    stdin.resume()
+    stdin.once 'data', (d) ->
+      line = d.toString().trim()
+      if line
+        opts.args.name = line
+        stdin.pause()
+      else if opts.args.nameSuggest
+        opts.args.name = opts.args.nameSuggest
+        stdin.pause()
+      cmd_setup()
+  else if typeof opts.args.emailSuggest == 'undefined'
+    exec 'git config --get user.email', (se,so,e)->
+      opts.args.emailSuggest = so.toString().trim()
+      cmd_setup()
+  else if ! opts.args.email
+    suggest = if opts.args.nameSuggest then " [#{opts.args.emailSuggest}]" else ""
+    process.stdout.write "Your email#{suggest}: "
+    stdin = process.openStdin()
+    stdin.resume()
+    stdin.once 'data', (d) ->
+      line = d.toString().trim()
+      if line
+        opts.args.email = line
+        stdin.pause()
+      else if opts.args.emailSuggest
+        opts.args.email = opts.args.emailSuggest
+        stdin.pause()
+      cmd_setup()
+  else # has email
+    settings = """
+    {
+      "user":"#{opts.args.name}",
+      "email":"#{opts.args.email}"
+    }
+    """
+    fs.writeFileSync "#{opts.store}local/settings.json", settings
+    print "Wrote settings to file: #{opts.store}local/settings.json"
+    print settings
+
+###
+# 
 # Inititalise a new .klog directory.
 # 
 ###
@@ -855,14 +908,8 @@ cmd_init = ->
     fs.mkdirSync opts.store
     fs.writeFileSync "#{opts.store}.gitignore","local"
     fs.mkdirSync "#{opts.store}local"
-    fs.writeFileSync "#{opts.store}local/settings.json","""
-    {
-      "user":"John Doe",
-      "email":"john@thedoughfactory.com"
-    }
-    """
     print "Now you have klogs on!"
-    exit 0
+    cmd_setup()
   else
     print "There is already a .klog/ directory present here"
     exit 1
@@ -927,6 +974,15 @@ opts =
   date: getDate()
   store: '.klog/'
 
+# read local settings file
+if fs.existsSync "#{opts.store}local/settings.json" 
+  buffer = fs.readFileSync "#{opts.store}local/settings.json"
+  settings = buffer.toString().trim()
+  settings = JSON.parse settings
+  # add key/vals to opts
+  for k, v of settings
+    opts[k] = v
+
 main = ->
 
   ###
@@ -969,6 +1025,13 @@ main = ->
     #  Initialise.
     #
     cmd_init()
+
+  else if opts.cmd.match /^setup$/i
+
+    #
+    #  setup.
+    #
+    cmd_setup()
 
   else if opts.cmd.match /^add$/i
 
@@ -1059,6 +1122,7 @@ main = ->
 
   else
     usage()
+
 
 opts.clrs = {}
 
