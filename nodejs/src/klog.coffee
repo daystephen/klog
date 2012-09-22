@@ -8,16 +8,6 @@
 #
 ###
 
-### DERIVED FROM
-# 
-#  milli
-#   by
-#  Steve
-#  --
-#  http://www.steve.org.uk/
-# 
-###
-
 ### LICENSE
 # 
 # Copyright (c) 2012 by Billy Moon.  All rights reserved.
@@ -29,26 +19,26 @@
 ###
 
 #
-#  Command line options
-#
-options = 
-  s:'state'
-  m:'message'
-  e:'editor'
-  t:'type'
-
-# simple toggels, don't consume next argument
-switches =
-  d:'debug'
-  x:'exit'
-
-#
 #  Modules
 #
 fs = require 'fs'
 exec = require("child_process").exec
 
 parseArgs = ->
+  #
+  #  Command line options
+  #
+  options = 
+    s:'state'
+    m:'message'
+    e:'editor'
+    t:'type'
+
+  # simple toggels, don't consume next argument
+  switches =
+    d:'debug'
+    x:'exit'
+
   args = process.argv
   o = {_:[],$0:[]}
   validOptions = []
@@ -127,7 +117,7 @@ getDate = ->
 # 
 # 
 ###
-randomUID = (o,t) ->
+randomUID = ->
   #
   #  The values that feed into the filename.
   #
@@ -238,7 +228,7 @@ editFile = (file) ->
     #  Open the editor
     #
 
-    $editor = opts.args.editor || process.env.EDITOR || (process.platform == 'win32' ?  'notepad' : "vim");
+    $editor = opts.args.editor || process.env.EDITOR || (opts.win ?  'notepad' : "vim");
     exec "#{$editor} #{file}"
 
 ### 
@@ -305,14 +295,15 @@ usage = ->
 # MD5 Library
 #
 
-md5 = require('./md5.js').MD5.hex_md5
+md5 = require('../lib/md5.js').MD5.hex_md5
 
 #
 #  Core Functions
 #
 
 hook = (action, file) ->
-  print "hooked #{action} with #{file}"
+  if hooks[action]
+    hooks[action].run(file)
 
 ### 
 # 
@@ -388,7 +379,7 @@ get_items = ->
     get_message get_items
   else
     print "got them all"
-  print opts.args
+  # print opts.args
 
 do_add = ->
   print "Will add with: "+opts.args
@@ -399,22 +390,17 @@ do_add = ->
 # The arguments specified are the optional title. 
 # 
 ###
-cmd_add = (args, type) ->
+cmd_add = (command) ->
 
   #
   #  Make a "random" filename, with the same UID as the content.s
   #
 
-  $uid = randomUID args
+  $uid = randomUID()
+  $title = command.title
+  $type = command.type || 'bug'
 
-  if args.length
-    $title = args.join " "
-  else
-    $title = "Untitled bug report"
-
-  $type = type || 'bug'
-
-  opts.args.file = opts.store+"#{opts.date}.#{$uid}.log";
+  opts.args.file = "#{opts.date}.#{$uid}.log";
 
   #
   #  Write our template to it
@@ -432,15 +418,13 @@ cmd_add = (args, type) ->
   #  If we were given a message, add it to the file, and return without
   #  invoking the editor.
   #
-  if opts.args.message
-    fs.writeFileSync opts.args.file, opts.args.template + opts.args.message+ "\n"
+  if command.message
+    fs.writeFileSync opts.store+opts.args.file, opts.args.template + command.message+ "\n"
     #
     #  If there is a hook, run it.
     #
     hook "add", opts.args.file
     return
-  else if true
-    get_items()
 
   #
   #  Otherwise add the default text, and show it in an editor.
@@ -457,7 +441,7 @@ cmd_add = (args, type) ->
     # klog:\n
     """
 
-    fs.writeFileSync opts.args.file, $template
+    fs.writeFileSync opts.args.file, opts.args.template
 
     #
     #  Open the file in the users' editor.
@@ -629,12 +613,12 @@ cmd_html = (args) ->
 # is optional.
 # 
 ###
-cmd_search = (args, $state) ->
+cmd_search = (command) ->
 
   #
   #  The search terms, if any.
   #
-  $terms = args.join ' '
+  $terms = command.args.terms
 
   #
   #  Get all available bugs.
@@ -644,12 +628,12 @@ cmd_search = (args, $state) ->
   #
   #  The state of the bugs the user is interested in.
   #
-  $state ?= 'all'
+  $state = if command.args.state then command.args.state else 'all'
 
   #
   #  The type of the bugs the user is interested in.
   #
-  $type = opts.args.type || "all"
+  $type = command.args.type || "all"
 
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
@@ -688,7 +672,7 @@ cmd_search = (args, $state) ->
     #  All terms must match.
     #
     $match = 1
-    if args.length # there are $terms
+    if command.args.terms # there are $terms
       for $term in $terms.split /[ \t]/
         if ! $b_title.match new RegExp $term, 'i'
           $match = 0
@@ -702,8 +686,8 @@ cmd_search = (args, $state) ->
     #
     # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\n";
     # removed number: ##{$b_number} 
-    hl = if $b_status == 'open' then opts.clrs.green else opts.clrs.red
-    print "%#{hl}#{$b_uid}#{opts.clrs.reset} [#{$b_status}] [#{$b_type}] #{$b_title}"
+    hl = if $b_status == 'open' then glob.clrs.green else glob.clrs.red
+    print "%#{hl}#{$b_uid}#{glob.clrs.reset} [#{$b_status}] [#{$b_type}] #{$b_title}"
 
 ### 
 # 
@@ -717,12 +701,12 @@ cmd_search = (args, $state) ->
 ###
 cmd_view = (args) ->
 
-  $value = args.join ''
+  $value = args.id
 
   #
   #  Ensure we know what we're operating upon
   #
-  if ! args.length # there is not a $value
+  if ! $value # there is not a $value
     print "You must specify a bug to view, either by the UID, or via the number.\n"
     print "\nFor example to view bug number 3 you'd run:\n"
     print "\tklog view 3\n\n";
@@ -811,12 +795,12 @@ cmd_reopen = (args) ->
 ###
 cmd_edit = (args) ->
 
-  $value = args.join ''
+  $value = args.id
 
   #
   #  Ensure we know what we're operating upon
   #
-  if ! args.length
+  if ! $value
     print """
     You must specify a bug to edit, either by the UID, or via the number.
     For example to edit bug number 3 you'd run:
@@ -850,12 +834,12 @@ cmd_edit = (args) ->
 ###
 cmd_delete = (args) ->
     
-    $value = args.join ''
+    $value = args.id
 
     #
     #  Ensure we know what we're operating upon
     #
-    if ! args.length
+    if ! $value
         print """
         You must specify a bug to delete, either by the UID, or via the number.
         For example to delete bug number 3 you'd run:
@@ -947,12 +931,37 @@ get_confirmation = (callback, message) ->
       process.stdin.destroy()
       exit 1
 
+get_required = (items, final) ->
+  stdin = process.openStdin()
+  if ! items?.length
+    stdin.pause()
+    if ! opts.command.needs?.length
+      delete opts.command.needs
+    final()
+  else
+    if ! opts.args[items[0]]
+      item = items.shift()
+    if ! opts.args[item] && item
+      process.stdout.write "#{item}: "
+      stdin.once 'data', (d) ->
+        line = d.toString().trim()
+        if line
+          opts.command.args[item] = line
+        else
+          items.unshift item
+        get_required items, final
+
 #
 #  parse opts.args and return command object
 #  should validate required options, but not their values
 #
 get_command = ->
-  out = {}
+  out =
+    args: []
+
+  get_id = ->
+    if id = opts.args._.shift()
+      opts.args.id = id.replace /^%/, ''
 
   # valid commands defined as obejct tree
   commands =
@@ -967,6 +976,19 @@ get_command = ->
           opts.args.id = id.replace /^%/, ''
     help: {}
     init: {}
+    search:
+      valid: ['type','state']
+    view:
+      required: ['id']
+      args: get_id
+    edit:
+      required: ['id']
+      args: get_id
+    close:
+      required: ['id']
+      args: get_id
+  
+  commands.list = commands.search
 
   # figure out what the command is, or assign `help`
   subcommand = opts.args._.shift() || 'help' # if no arguments
@@ -993,6 +1015,18 @@ get_command = ->
         out.args = {} unless out.args
         out.args[valid] = has
 
+  # superfluous options
+  for x of opts.args
+    if x != '$0' && x != '_'
+      if ! out.args[x]
+        rejects = [] unless rejects
+        rejects.push x
+
+  if rejects
+    message = "Error: unsupported option used"
+    print message
+    exit 1
+
   return out
 
 ###
@@ -1001,11 +1035,133 @@ get_command = ->
 #
 ###
 
-#
-#  Start reading stdin
-#
-# stdin = process.openStdin()
-# stdin.resume()
+main = ->
+
+  # Parse the command line options.
+  opts.args = parseArgs()  
+
+  # Generate command from arguments
+  opts.command = get_command()
+
+  get_required opts.command.needs, ->
+    process.stdout.write "Command: "
+    print opts.command
+
+    # temporary fix of args
+    opts.args._.unshift opts.command.name
+    
+    if opts.args.debug
+      print opts.args
+      
+    if opts.args.exit
+      exit 0    
+
+    #
+    #  Ensure we received an argument.
+    #
+
+    if opts.args.help || ! opts.args._.length
+      usage()
+      exit 1
+    else
+      opts.cmd = opts.args._.shift()
+
+    #
+    #  Decide what to do, based upon the command given.
+    #
+    if opts.cmd.match /^init$/i
+
+      #
+      #  Initialise.
+      #
+      cmd_init()
+
+    else if opts.cmd.match /^add$/i
+
+      #
+      #  Add a bug.
+      #
+
+      cmd_add opts.command.args
+
+
+    else if opts.cmd.match /^append$/i
+
+      #
+      #  Append a section of text to an existing bug report.
+      #
+      cmd_append opts.command
+
+    else if opts.cmd.match /^html$/i
+
+      #
+      #  Output bugs as a simple HTML page.
+      #
+      cmd_html opts.args._
+
+    else if opts.cmd.match /^(list|search)$/i
+
+      #
+      #  Find bugs.
+      #
+      cmd_search opts.command
+
+    else if opts.cmd.match /^open$/i
+
+      #
+      #  List only open bugs.
+      #
+      cmd_search opts.args._, 'open'
+
+    else if opts.cmd.match /^closed$/i
+
+      #
+      #  List only closed bugs.
+      #
+      cmd_search opts.args._, 'closed'
+
+    else if opts.cmd.match /^view$/i
+
+      #
+      #  View a single bug.
+      #
+      cmd_view opts.command.args
+
+    else if opts.cmd.match /^close$/i
+
+      #
+      #  Mark a bug as closed.
+      #
+      cmd_close opts.args._
+
+    else if opts.cmd.match /^reopen$/i
+
+      #
+      #  Mark a bug as open.
+      #
+      cmd_reopen opts.args._
+
+    else if opts.cmd.match /^edit$/i
+
+      #
+      #  Edit a bug.
+      #
+      cmd_edit opts.command.args
+
+    else if opts.cmd.match /^delete$/i
+
+      #
+      #  Delete a bug.
+      #
+
+      cmd_view opts.command.args
+      print "About to delete this bug..."
+      get_confirmation ->
+        cmd_delete opts.command.args
+      , "Phew, that was close!"
+
+    else
+      usage()
 
 #
 #  Globals
@@ -1014,154 +1170,54 @@ opts =
   ext: 'log' # file extension for data files
   date: getDate()
   store: '.klog/'
+  win: process.platform == 'win32'
 
-main = ->
+path = process.cwd().split /\//
+for folder in path
+  sep = if opts.win then "\\" else "/"
+  tpath = (path.join sep)+sep
+  if fs.existsSync "#{tpath}#{opts.store}"
+    opts.path = tpath
+    break
+  path.pop()
 
-  ###
-  #
-  # Parse the command line options.
-  # 
-  ###
-  opts.args = parseArgs()
+glob = {}
+glob.clrs = {
 
-  #
-  # Generate command from arguments
-  #
-  # opts.command = get_command()
+  bright:"\u001b[1m",
 
-  # print opts
-  # exit 0
-  
-  if opts.args.debug
-    print opts.args
-    
-  if opts.args.exit
-    exit 0    
+  red:"\u001b[31m",
+  green:"\u001b[32m",
+  blue:"\u001b[34m",
 
-  # user = ''
-  # email = ''
+  cyan:"\u001b[36m",
+  magenta:"\u001b[35m",
+  yellow:"\u001b[33m",
+  black:"\u001b[30m",
 
-  # exec 'git config --get user.email', (se,so,e) ->
-  #   email = so.replace /\n/, ''
-  #   exec 'git config --get user.name', (se,so,e) ->
-  #     user = so.replace /\n/, ''
+  silver:"\u001b[30m",
+  white:"\u001b[37m",
 
-  #
-  #  Ensure we received an argument.
-  #
+  back_red:"\u001b[41m",
+  back_green:"\u001b[42m",
+  back_blue:"\u001b[44m",
+  back_cyan:"\u001b[46m",
+  back_magenta:"\u001b[45m",
+  back_yellow:"\u001b[43m",
+  back_black:"\u001b[40m",
+  back_silver:"\u001b[47m",
 
-  if opts.args.help || ! opts.args._.length
-    usage()
-    exit 1
-  else
-    opts.cmd = opts.args._.shift()
+  reset:"\u001b[m\u000f"
 
-  #
-  #  Decide what to do, based upon the command given.
-  #
-  if opts.cmd.match /^init$/i
-
-    #
-    #  Initialise.
-    #
-    cmd_init()
-
-  else if opts.cmd.match /^add$/i
-
-    #
-    #  Add a bug.
-    #
-
-    get_user_details -> cmd_add opts.args._, opts.args.type, opts.args.email
+}
 
 
-  else if opts.cmd.match /^append$/i
+# get hooks and add them to objects
+hooks = {}
+if fs.existsSync "#{opts.path+opts.store}hooks"
+  fs.readdirSync("#{opts.path+opts.store}hooks").forEach (file) ->
+    hooks[file.replace /\.\w+$/,''] = require "#{opts.path+opts.store}hooks/#{file}"
 
-    #
-    #  Append a section of text to an existing bug report.
-    #
-    get_user_details -> cmd_append opts.args._
+# fire it up
+main()
 
-  else if opts.cmd.match /^html$/i
-
-    #
-    #  Output bugs as a simple HTML page.
-    #
-    cmd_html opts.args._
-
-  else if opts.cmd.match /^(list|search)$/i
-
-    #
-    #  Find bugs.
-    #
-    if opts.args.state
-      cmd_search opts.args._, opts.args.state
-    else
-      cmd_search opts.args._, opts.args.state
-
-  else if opts.cmd.match /^open$/i
-
-    #
-    #  List only open bugs.
-    #
-    cmd_search opts.args._, 'open'
-
-  else if opts.cmd.match /^closed$/i
-
-    #
-    #  List only closed bugs.
-    #
-    cmd_search opts.args._, 'closed'
-
-  else if opts.cmd.match /^view$/i
-
-    #
-    #  View a single bug.
-    #
-    cmd_view opts.args._
-
-  else if opts.cmd.match /^close$/i
-
-    #
-    #  Mark a bug as closed.
-    #
-    cmd_close opts.args._
-
-  else if opts.cmd.match /^reopen$/i
-
-    #
-    #  Mark a bug as open.
-    #
-    cmd_reopen opts.args._
-
-  else if opts.cmd.match /^edit$/i
-
-    #
-    #  Edit a bug.
-    #
-    cmd_edit opts.args._
-
-  else if opts.cmd.match /^delete$/i
-
-    #
-    #  Delete a bug.
-    #
-
-    cmd_view opts.args._
-    print "About to delete this bug..."
-    get_confirmation ->
-      cmd_delete opts.args._
-    , "Phew, that was close!"
-
-  else
-    usage()
-
-opts.clrs = {}
-
-exec "tput setaf 1", (se,so,e) ->
-  opts.clrs.red = so
-  exec "tput setaf 2", (se,so,e) ->
-    opts.clrs.green = so
-    exec "tput sgr0", (se,so,e) ->
-      opts.clrs.reset = so
-      main()
