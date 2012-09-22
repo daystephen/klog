@@ -22,6 +22,9 @@ fs = require 'fs'
 exec = require("child_process").exec
 
 # MD5 Library
+_ = require('../lib/underscore-min.js')
+
+# MD5 Library
 md5 = require('../lib/md5.js').MD5.hex_md5
 
 ## Functions
@@ -100,20 +103,20 @@ getDate = ->
 # are unlikely.
 randomUID = ->
   # The values that feed into the filename.
-  $uid = opts.date+"."+opts.args.email
+  $uid = opts.date+"."+opts.email
   $uid = md5 $uid
   $uid = $uid.replace /(.{4}).+/, "$1"
   return $uid
 
 # Find and return an array of hashes, one for each existing bug.
 getBugs = ->
-  files = fs.readdirSync opts.store
+  files = fs.readdirSync "#{opts.path+opts.store}"
   files.sort()
   $results = []
   $number = 1
   for file in files
     if file.match /\.log$/
-      buffer = fs.readFileSync ".klog/#{file}"
+      buffer = fs.readFileSync "#{opts.path+opts.store}#{file}"
       lines = buffer.toString().split /\n/
       # print content
       $body = []
@@ -180,7 +183,7 @@ editFile = (file) ->
   exec "#{$editor} #{file}"
 
 # Remove the "# klog: " prefix from the given file.
-removeClog = ($file) ->
+remove_comments = ($file) ->
   # Open the source file for reading.
   try
     buffer = fs.readFileSync $file
@@ -213,16 +216,17 @@ usage = ->
       view                - Show all details about a specific bug.
 
     Options:
-      -e, --editor        - Specify which editor to use.
+      -t, --type          - issue type (default:bug) i.e. feature/enhance/task
       -m, --message       - Use the given message rather than spawning an editor.
       -s, --state         - Restrict matches when searching (open/closed).
 
   '''
+     # -e, --editor        - Specify which editor to use.
   exit 0
 
 hook = (action, file) ->
   if hooks[action]
-    hooks[action].run(file)
+    hooks[action].run file
 
 # Change the statues of an existing bug.  Valid statuses are
 # "open" and "closed".
@@ -252,7 +256,6 @@ changeBugState = ($value, $state) ->
   # If there is a hook, run it.
   hook $state, $bug.file
 
-# Handlers for the commands.
 get_title = (callback)->
   stdin = process.openStdin()
   process.stdout.write "Title: "
@@ -280,16 +283,15 @@ get_items = ->
   else
     print "got them all"
 
-do_add = ->
-  print "Will add with: "+opts.args
+## Handlers for the commands.
 
 # Add a new bug.
-cmd_add = (command) ->
+cmd_add = (args) ->
 
   # Make a "random" filename, with the same UID as the content.
   $uid = randomUID()
-  $title = command.title
-  $type = command.type || 'bug'
+  $title = args.title
+  $type = args.type || 'bug'
 
   opts.args.file = "#{opts.date}.#{$uid}.log";
 
@@ -299,14 +301,14 @@ cmd_add = (command) ->
   Type: #{$type}
   Title: #{$title}
   Added: #{opts.date}
-  Author: #{opts.args.name}
+  Author: #{opts.user}
   Status: open\n\n
   """
 
   # If we were given a message, add it to the file, and return without
   # invoking the editor.
-  if command.message
-    fs.writeFileSync opts.store+opts.args.file, opts.args.template + command.message+ "\n"
+  if args.message
+    fs.writeFileSync opts.path+opts.store+opts.args.file, opts.args.template + args.message+ "\n"
     # If there is a hook, run it.
     hook "add", opts.args.file
     return
@@ -331,7 +333,7 @@ cmd_add = (command) ->
     editFile opts.args.file
 
     # Once it was saved remove the lines that mention "# klog: "
-    removeClog opts.args.file
+    remove_comments opts.args.file
 
     # If there is a hook, run it.
     hook "add", opts.args.file
@@ -368,7 +370,7 @@ cmd_append = (args) ->
     editFile opts.store+$bug.file
 
     # Once it was saved remove the lines that mention "# klog: "
-    removeClog opts.store+$bug.file
+    remove_comments opts.store+$bug.file
 
     # If there is a hook, run it.
     hook "append", $bug.file
@@ -443,19 +445,19 @@ cmd_html = (args) ->
 # Search the existing bugs.
 # Here search means "match against title and status".  Either of which
 # is optional.
-cmd_search = (command) ->
+cmd_search = (args) ->
 
   # The search terms, if any.
-  $terms = command.args.terms
+  $terms = args.terms
 
   # Get all available bugs.
   $bugs = getBugs()
 
   # The state of the bugs the user is interested in.
-  $state = if command.args.state then command.args.state else 'all'
+  $state = if args.state then args.state else 'all'
 
   # The type of the bugs the user is interested in.
-  $type = command.args.type || "all"
+  $type = args.type || "all"
 
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
@@ -483,7 +485,7 @@ cmd_search = (command) ->
     # If there are search terms then search the title.
     # All terms must match.
     $match = 1
-    if command.args.terms # there are $terms
+    if args.terms # there are $terms
       for $term in $terms.split /[ \t]/
         if ! $b_title.match new RegExp $term, 'i'
           $match = 0
@@ -494,7 +496,10 @@ cmd_search = (command) ->
     # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\n";
     # removed number: ##{$b_number} 
     hl = if $b_status == 'open' then glob.clrs.green else glob.clrs.red
-    print "%#{hl}#{$b_uid}#{glob.clrs.reset} [#{$b_status}] [#{$b_type}] #{$b_title}"
+    cb = glob.clrs.bright
+    ch = glob.clrs.yellow
+    cr = glob.clrs.reset
+    print "%#{hl}#{$b_uid}#{glob.clrs.reset} [#{ch}#{$b_status}#{cr}] [#{ch+cb}#{$b_type}#{cr}] #{$b_title}"
 
 # View a specific bug.
 # This means:
@@ -522,18 +527,18 @@ cmd_view = (args) ->
   $bug = getBugByUIDORNumber $value
 
   # Show it to the console
-  buffer = fs.readFileSync opts.store + $bug.file
-  print buffer.toString()
+  buffer = fs.readFileSync opts.path+opts.store + $bug.file
+  print buffer.toString().replace /^(\w+): /gm, "#{glob.clrs.yellow}$1#{glob.clrs.reset}: "
 
 
 # Close a given bug.
 cmd_close = (args) ->
 
   # Get the bug.
-  $value = args.join ' '
+  $value = args.id
 
   # Ensure we know what we're operating upon
-  if ! args.length # has $value
+  if ! $value # has $value
     print """
     You must specify a bug to close, either by the UID, or via the number.
     For example to close bug number 3 you'd run:
@@ -582,7 +587,7 @@ cmd_edit = (args) ->
   $bug = getBugByUIDORNumber $value
 
   # Edit the file the bug is stored in.
-  editFile opts.store+$bug.file
+  editFile opts.path+opts.store+$bug.file
 
   # If there is a hook, run it.
   hook "edit", $bug.file
@@ -609,7 +614,7 @@ cmd_delete = (args) ->
 
     # Delete the file the bug is stored in.
     $file = $bug.file
-    fs.unlinkSync opts.store+$file
+    fs.unlinkSync opts.path+opts.store+$file
 
     # If there is a hook, run it.
     hook "delete", $bug.file
@@ -618,47 +623,54 @@ cmd_delete = (args) ->
 cmd_init = ->
   if ! fs.existsSync opts.store
     fs.mkdirSync opts.store
-    fs.writeFileSync "#{opts.store}.gitignore","local"
-    fs.mkdirSync "#{opts.store}local"
-    fs.writeFileSync "#{opts.store}local/settings.json","""
-    {
-      "user":"John Doe",
-      "email":"john@thedoughfactory.com"
-    }
-    """
-    print "Now you have klogs on!"
-    exit 0
+    print "#{glob.clrs.gunmetal}Now you have klogs on#{glob.clrs.reset}#{glob.clrs.red}!#{glob.clrs.reset}"
+    cmd_setup()
   else
     print "There is already a .klog/ directory present here"
     exit 1
 
+cmd_setup = ->
+  if opts.user && opts.email
+    settings = """
+    {
+      "user":"#{opts.user || 'John Doe'}",
+      "email":"#{opts.email || 'john@thedoughfactory.com'}"
+    }
+    """
+    fs.writeFileSync "#{opts.store}.gitignore","local"
+    fs.mkdirSync "#{opts.store}local"
+    fs.writeFileSync "#{opts.store}local/settings.json", settings
+    print "Wrote settings to local file: #{opts.store}local/settings.json\n\n#{settings}\n"
+  else
+    get_user_details cmd_setup
+
 get_user_details = (callback) ->
-  if opts.args.name && opts.args.email
+  if opts.user && opts.email
     callback()
   else
     exec 'git config --get user.email', (se,so,e) ->
       if so.length
-        opts.args.email = so.replace /\n/, ''
+        opts.email = so.replace /\n/, ''
         exec 'git config --get user.name', (se,so,e) ->
           if so.length
-            opts.args.name = so.replace /\n/, ''
+            opts.user = so.replace /\n/, ''
           else
-            opts.args.name = opts.args.email.replace /@.+$/, ''
+            opts.user = opts.email.replace /@.+$/, ''
           callback()
       else
         print """
         Tried to get email address from Git, but could not determine using:
         \n\tgit config --get user.email\n
         It might be a good idea to set it with:
-        \n\tgit options etc...\n
+        \n\tgit config etc...\n
         """
         print "Please enter your details... (leave blank to abort)"
         stdin = process.openStdin()
         process.stdout.write "Name: "
         stdin.addListener "data", (d) ->
-          if ! opts.args.name && opts.args.name = d.toString().substring(0, d.length-1)
+          if ! opts.user && opts.user = d.toString().substring(0, d.length-1)
             process.stdout.write "Email: "
-          else if ! opts.args.email && opts.args.email = d.toString().substring(0, d.length-1)
+          else if ! opts.email && opts.email = d.toString().substring(0, d.length-1)
             process.stdin.destroy()
             callback()
           else
@@ -667,7 +679,7 @@ get_user_details = (callback) ->
 
 get_confirmation = (callback, message) ->
   stdin = process.openStdin()
-  process.stdout.write "Are you sure? [yes/yep/yeah/y|no/nope/nah/n]: "
+  process.stdout.write "Are you sure? [yep/nope]: "
   stdin.addListener "data", (d) ->
     if d.toString().match /y(e(p|s|ah))?/i    
       callback()
@@ -723,6 +735,16 @@ get_command = ->
     init: {}
     search:
       valid: ['type','state']
+    open:
+      required: ['state'] # auto populated
+      valid: ['type']
+      args: ->
+        opts.args.state = 'open'
+    closed:
+      required: ['state'] # auto populated
+      valid: ['type']
+      args: ->
+        opts.args.state = 'closed'
     view:
       required: ['id']
       args: get_id
@@ -784,8 +806,9 @@ main = ->
   opts.command = get_command()
 
   get_required opts.command.needs, ->
-    process.stdout.write "Command: "
+    process.stdout.write "#{glob.clrs.red+glob.clrs.bright}Command: "
     print opts.command
+    process.stdout.write "#{glob.clrs.reset}"
 
     # temporary fix of args
     opts.args._.unshift opts.command.name
@@ -830,17 +853,18 @@ main = ->
     else if opts.cmd.match /^(list|search)$/i
 
       # Find bugs.
-      cmd_search opts.command
+      cmd_search opts.command.args
 
     else if opts.cmd.match /^open$/i
 
+      print opts.command
       # List only open bugs.
-      cmd_search opts.args._, 'open'
+      cmd_search opts.command.args
 
     else if opts.cmd.match /^closed$/i
 
       # List only closed bugs.
-      cmd_search opts.args._, 'closed'
+      cmd_search opts.command.args
 
     else if opts.cmd.match /^view$/i
 
@@ -850,7 +874,7 @@ main = ->
     else if opts.cmd.match /^close$/i
 
       # Mark a bug as closed.
-      cmd_close opts.args._
+      cmd_close opts.command.args
 
     else if opts.cmd.match /^reopen$/i
 
@@ -892,6 +916,12 @@ for folder in path
     break
   path.pop()
 
+# Read settings (including `user` and `email`)
+if fs.existsSync "#{opts.path}#{opts.store}/local/settings.json"
+  buffer = fs.readFileSync "#{opts.path}#{opts.store}/local/settings.json"
+  settings = JSON.parse buffer.toString()
+  opts = _.extend opts, settings
+
 glob = {}
 glob.clrs = {
 
@@ -906,8 +936,9 @@ glob.clrs = {
   yellow:"\u001b[33m",
   black:"\u001b[30m",
 
-  silver:"\u001b[30m",
-  white:"\u001b[37m",
+  gunmetal:"\u001b[30m\u001b[1m",
+  silver:"\u001b[37m",
+  white:"\u001b[37m\u001b[1m",
 
   back_red:"\u001b[41m",
   back_green:"\u001b[42m",

@@ -1,0 +1,8 @@
+UID: d242
+Type: feature
+Title: project summary
+Added: 2012-09-18_01-54-02.794
+Author: undefined
+Status: open
+
+the command clog on its own should generate a summary of open/closed issues sorted by type
