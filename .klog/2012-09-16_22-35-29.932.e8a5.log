@@ -1,0 +1,8 @@
+UID: e8a5
+Type: feature
+Title: use words to identify bug by position in list
+Added: 2012-09-16_22-35-29.932
+Author: undefined
+Status: open
+
+Words like `first|next|prev(ious)?|last` should identify bugs in a list. This will require the last viewed/used issue to be remembered.

@@ -17,4 +17,4 @@ via the node package manager...
 
 ## The whole story
 
-For more details, see the [Project Website](http://billmoon.github.com/klog/)
+For more details, see the [Project Website](http://billymoon.github.com/klog/)
