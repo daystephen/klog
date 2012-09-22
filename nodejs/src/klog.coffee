@@ -1,33 +1,34 @@
 #!/usr/bin/env coffee
 
-### AUTHOR
-# 
-# Billy Moon
-#
-# http://billy.itaccess.org/
-#
+# START HEADER COMMENTS
 ###
 
-### LICENSE
-# 
-# Copyright (c) 2012 by Billy Moon.  All rights reserved.
-# 
-# This module is free software;
-# you can redistribute it and/or modify it under the MIT license
-# The LICENSE file contains the full text of the license.
-# 
-###
+Author: Billy Moon (http://billy.itaccess.org/)
 
-#
-#  Modules
-#
+LICENSE:
+
+  Copyright (c) 2012 by Billy Moon.  All rights reserved.
+
+  This module is free software;
+  you can redistribute it and/or modify it under the MIT license
+  The LICENSE file contains the full text of the license.
+
+###
+# END HEADER COMMENTS
+
+## Modules
+
 fs = require 'fs'
 exec = require("child_process").exec
 
+# MD5 Library
+md5 = require('../lib/md5.js').MD5.hex_md5
+
+## Functions
+
 parseArgs = ->
-  #
-  #  Command line options
-  #
+
+  # Command line options
   options = 
     s:'state'
     m:'message'
@@ -84,54 +85,27 @@ parseArgs = ->
 
   return o
 
-###
-#
-#  Utility functions.
-#
-###
+## Utility functions.
 
-#
-#  Pad a string (with 0 or specified)
-#
+# Pad a string (with 0 or specified)
 pad=`function(e,t,n){n=n||"0",t=t||2;while((""+e).length<t)e=n+e;return e}`
 
-###
-#
-# return date in format
-#
-#    yyyy-mm-dd_hh-ii-ss
-#
-###
-
+# return date in format yyyy-mm-dd_hh-ii-ss
 getDate = ->
   c = new Date()
   return c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate()-5)+"_"+c.toLocaleTimeString().replace(/\D/g,'-')+"."+pad(c.getMilliseconds(),3)
 
-### 
-# Generate a system UID.  This should be created with the hostname and
+# Generate a system UID.  This should be created with the username and
 # time included, such that collisions when running upon multiple systems
 # are unlikely.
-# 
-# (A bug will be uniquely referenced by the UID, even though in practise
-# people will use bug numbers they are prone to change.)
-# 
-# 
-###
 randomUID = ->
-  #
-  #  The values that feed into the filename.
-  #
+  # The values that feed into the filename.
   $uid = opts.date+"."+opts.args.email
   $uid = md5 $uid
   $uid = $uid.replace /(.{4}).+/, "$1"
-
   return $uid
 
-### 
-# 
 # Find and return an array of hashes, one for each existing bug.
-# 
-###
 getBugs = ->
   files = fs.readdirSync opts.store
   files.sort()
@@ -167,39 +141,24 @@ getBugs = ->
 
   return $results
 
-#
-#  Print to console
-#
+# Print to console
 print = (txt) ->
   console.log txt
 
-###
-# 
 # Get the data for a given bug, either by number of UID.
-# 
-###
 getBugByUIDORNumber = ($arg) ->
-  #
-  #  Get all bugs.
-  #
+  # Get all bugs.
   $bugs = getBugs()
-  #
-  #  For each one.
-  #
+  # For each one.
   for $possible in $bugs
-    #
     # If the argument was NNNN then look for that bug number.
-    #
-
     # strip lead bug identifier
     $arg = $arg.replace /^%/, ''
     
     if m = $arg.match /^([0-9]{1,3})$/i
       $bug = $possible if parseInt(m[1]) == $possible.number
     else
-      #
-      #  Otherwise look for it by UID
-      #
+      # Otherwise look for it by UID
       $bug = $possible if $arg.toLowerCase() == $possible.uid.toLowerCase()
 
     if $bug
@@ -207,41 +166,22 @@ getBugByUIDORNumber = ($arg) ->
   print "Bug not found: #{$arg}\n"
   exit 1
 
-#
-#  Exit app
-#
-
+# Exit app with error code
 exit = (code) ->
+
   print "EXIT ~ with code: "+code
   process.exit code
 
-### 
-# 
 # Open the given file with either the users editor, the systems editor,
-# or as a last resort vim.
-# 
-###
-
+# or as a last resort vim or notepad depending on platform.
 editFile = (file) ->
+  # Open the editor
+  $editor = opts.args.editor || process.env.EDITOR || (opts.win ?  'notepad' : "vim");
+  exec "#{$editor} #{file}"
 
-    #
-    #  Open the editor
-    #
-
-    $editor = opts.args.editor || process.env.EDITOR || (opts.win ?  'notepad' : "vim");
-    exec "#{$editor} #{file}"
-
-### 
-# 
 # Remove the "# klog: " prefix from the given file.
-# 
-###
-
 removeClog = ($file) ->
-
-  #
-  #  Open the source file for reading.
-  #
+  # Open the source file for reading.
   try
     buffer = fs.readFileSync $file
   catch e
@@ -249,18 +189,10 @@ removeClog = ($file) ->
     exit 
 
   content = buffer.toString().replace /^# klog:.*\n/mg, ''
-
-  #
-  #  Write the contents, removing any lines matching our marker-pattern
-  #
+  # Write the contents, removing any lines matching our marker-pattern
   fs.writeFileSync $file, content
 
-### 
-#
 # Show the usage of this script and exit.
-# 
-###
-
 usage = ->
   print '''
 
@@ -288,54 +220,28 @@ usage = ->
   '''
   exit 0
 
-
-#  Custom Modules
-
-#
-# MD5 Library
-#
-
-md5 = require('../lib/md5.js').MD5.hex_md5
-
-#
-#  Core Functions
-#
-
 hook = (action, file) ->
   if hooks[action]
     hooks[action].run(file)
 
-### 
-# 
 # Change the statues of an existing bug.  Valid statuses are
 # "open" and "closed".
-# 
-###
 changeBugState = ($value, $state) ->
 
-  #
-  #  Ensure the status is valid.
-  #
+  # Ensure the status is valid.
   if ! $state.match /^(open|closed)$/i
     print "Invalid status #{$state}"
     exit 1
 
-  #
-  #  Get the bug.
-  #
+  # Get the bug.
   $bug = getBugByUIDORNumber $value
 
-  #
-  #  Ensure the bug isn't already in the specified state.
-  #
+  # Ensure the bug isn't already in the specified state.
   if $bug.status == $state
     print "The bug is already $state!\n"
     exit 1
 
-  #
-  #  Now write out the new status section.
-  #
-  
+  # Now write out the new status section.
   content = """\n
   Modified: #{opts.date}
   Status: #{$state}\n
@@ -343,16 +249,10 @@ changeBugState = ($value, $state) ->
 
   fs.appendFileSync opts.store+$bug.file, content
 
-  #
-  #  If there is a hook, run it.
-  #
+  # If there is a hook, run it.
   hook $state, $bug.file
 
-#
-#  Handlers for the commands.
-#
-#
-
+# Handlers for the commands.
 get_title = (callback)->
   stdin = process.openStdin()
   process.stdout.write "Title: "
@@ -379,32 +279,21 @@ get_items = ->
     get_message get_items
   else
     print "got them all"
-  # print opts.args
 
 do_add = ->
   print "Will add with: "+opts.args
 
-###
 # Add a new bug.
-# 
-# The arguments specified are the optional title. 
-# 
-###
 cmd_add = (command) ->
 
-  #
-  #  Make a "random" filename, with the same UID as the content.s
-  #
-
+  # Make a "random" filename, with the same UID as the content.
   $uid = randomUID()
   $title = command.title
   $type = command.type || 'bug'
 
   opts.args.file = "#{opts.date}.#{$uid}.log";
 
-  #
-  #  Write our template to it
-  #
+  # Write our template to it
   opts.args.template = """
   UID: #{$uid}
   Type: #{$type}
@@ -414,20 +303,15 @@ cmd_add = (command) ->
   Status: open\n\n
   """
 
-  #
-  #  If we were given a message, add it to the file, and return without
-  #  invoking the editor.
-  #
+  # If we were given a message, add it to the file, and return without
+  # invoking the editor.
   if command.message
     fs.writeFileSync opts.store+opts.args.file, opts.args.template + command.message+ "\n"
-    #
-    #  If there is a hook, run it.
-    #
+    # If there is a hook, run it.
     hook "add", opts.args.file
     return
 
-  #
-  #  Otherwise add the default text, and show it in an editor.
+  # Otherwise add the default text, and show it in an editor.
   #  (ending newline helps in stripping the comments out later)
   else
 
@@ -443,52 +327,23 @@ cmd_add = (command) ->
 
     fs.writeFileSync opts.args.file, opts.args.template
 
-    #
-    #  Open the file in the users' editor.
-    #
+    # Open the file in the users' editor.
     editFile opts.args.file
 
-    ### one day we could use a bug template file
-    if ( -e ".klog/new-bug-template" )
-    {
-        open( TMP, "<", ".klog/new-bug-template" ) or
-          die "Failed to open file $!";
-        while ( my $line = <TMP> )
-        {
-            print FILE $line;
-        }
-        close(TMP);
-    }
-    ###
-
-    #
-    #  Once it was saved remove the lines that mention "# klog: "
-    #
+    # Once it was saved remove the lines that mention "# klog: "
     removeClog opts.args.file
 
-    #
-    #  If there is a hook, run it.
-    #
+    # If there is a hook, run it.
     hook "add", opts.args.file
 
-### 
 # Open an editor with a new block appended to the end of the file.
-# 
 # This mostly means:
-# 
 #    1.  find the file associated with a given bug.
-# 
 #    2.  Append the new text.
-# 
 #    3.  Allow the user to edit that file.
-# 
-# 
-###
 cmd_append = (args) ->
 
-    #
-    #  Ensure we know what we're operating upon
-    #
+    # Ensure we know what we're operating upon
     if !args.length
       print """
       You must specify a bug to append to, either by the UID, or via the number.
@@ -497,14 +352,10 @@ cmd_append = (args) ->
       """
       exit 1
 
-    #
-    #  Get the bug
-    #
+    # Get the bug
     $bug = getBugByUIDORNumber args[0]
 
-    #
-    #  If we were given a message add it, otherwise spawn the editor.
-    #
+    # If we were given a message add it, otherwise spawn the editor.
     if opts.args.message
       $out = "\nModified: #{opts.date}\n#{opts.args.message}\n"
       fs.appendFileSync opts.store+$bug.file, $out
@@ -513,37 +364,23 @@ cmd_append = (args) ->
       $out = "\nModified: #{opts.date}\n\n"
       fs.appendFileSync opts.store+$bug.file, $out      
 
-    #
-    #  Allow the user to make the edits.
-    #
+    # Allow the user to make the edits.
     editFile opts.store+$bug.file
 
-    #
-    #  Once it was saved remove the lines that mention "# klog: "
-    #
+    # Once it was saved remove the lines that mention "# klog: "
     removeClog opts.store+$bug.file
 
-    #
-    #  If there is a hook, run it.
-    #
+    # If there is a hook, run it.
     hook "append", $bug.file
 
 
-### 
-# 
 # Output a HTML page for the bugs.
-# 
-###
 cmd_html = (args) ->
 
-  #
-  #  Get all bugs.
-  #
+  # Get all bugs.
   $bugs = getBugs()
 
-  #
-  #  Open + closed bugs.
-  #
+  # Open + closed bugs.
   $open = []
   $closed = []
 
@@ -553,9 +390,7 @@ cmd_html = (args) ->
     else
       $closed.push $b
 
-  #
-  #  Counts
-  #
+  # Counts
   $open_count   = $open.length
   $closed_count = $closed.length
 
@@ -605,46 +440,29 @@ cmd_html = (args) ->
   </html>
   """
 
-### 
-# 
 # Search the existing bugs.
-# 
 # Here search means "match against title and status".  Either of which
 # is optional.
-# 
-###
 cmd_search = (command) ->
 
-  #
-  #  The search terms, if any.
-  #
+  # The search terms, if any.
   $terms = command.args.terms
 
-  #
-  #  Get all available bugs.
-  #
+  # Get all available bugs.
   $bugs = getBugs()
 
-  #
-  #  The state of the bugs the user is interested in.
-  #
+  # The state of the bugs the user is interested in.
   $state = if command.args.state then command.args.state else 'all'
 
-  #
-  #  The type of the bugs the user is interested in.
-  #
+  # The type of the bugs the user is interested in.
   $type = command.args.type || "all"
 
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
-  #
-  #  For each bug
-  #
+  # For each bug
   for $bug in $bugs
 
-    #
-    #  Find basic meta-data.
-    #
+    # Find basic meta-data.
     $b_title  = $bug.title
     $b_type   = $bug.type
     $b_status = $bug.status
@@ -652,60 +470,41 @@ cmd_search = (command) ->
     $b_file   = $bug.file
     $b_number = $bug.number
 
-    #
-    #  If the user is being specific about status then
+    # If the user is being specific about status then
     # skip ones that don't match, as this is cheap.
-    #
     if $state != "all" and $state.toLowerCase() != $b_status.toLowerCase()
       continue
 
-    #
-    #  If the user is being specific about type then
-    #  skip ones that don't match
-    #
+    # If the user is being specific about type then
+    # skip ones that don't match
     if $type != "all" and $type.toLowerCase() != $b_type.toLowerCase()
       continue
 
-    #
-    #  If there are search terms then search the title.
-    #
-    #  All terms must match.
-    #
+    # If there are search terms then search the title.
+    # All terms must match.
     $match = 1
     if command.args.terms # there are $terms
       for $term in $terms.split /[ \t]/
         if ! $b_title.match new RegExp $term, 'i'
           $match = 0
-    #
-    #  If we didn't find a match move on.
-    #
+    # If we didn't find a match move on.
     continue unless $match
 
-    #
-    #  Otherwise show a summary of the bug.
-    #
+    # Otherwise show a summary of the bug.
     # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\n";
     # removed number: ##{$b_number} 
     hl = if $b_status == 'open' then glob.clrs.green else glob.clrs.red
     print "%#{hl}#{$b_uid}#{glob.clrs.reset} [#{$b_status}] [#{$b_type}] #{$b_title}"
 
-### 
-# 
 # View a specific bug.
-# 
 # This means:
-# 
 #    1.  Find the file associated with the bug.
 #    2.  Open it and print it to the console.
-# 
-###
 cmd_view = (args) ->
 
   $value = args.id
 
-  #
-  #  Ensure we know what we're operating upon
-  #
+  # Ensure we know what we're operating upon
   if ! $value # there is not a $value
     print "You must specify a bug to view, either by the UID, or via the number.\n"
     print "\nFor example to view bug number 3 you'd run:\n"
@@ -719,33 +518,21 @@ cmd_view = (args) ->
 
     exit 1
 
-  #
-  #  Get the bug.
-  #
+  # Get the bug.
   $bug = getBugByUIDORNumber $value
 
-  #
-  #  Show it to the console
-  #
+  # Show it to the console
   buffer = fs.readFileSync opts.store + $bug.file
   print buffer.toString()
 
 
-### 
-# 
 # Close a given bug.
-# 
-###
 cmd_close = (args) ->
 
-  #
-  #  Get the bug.
-  #
+  # Get the bug.
   $value = args.join ' '
 
-  #
-  #  Ensure we know what we're operating upon
-  #
+  # Ensure we know what we're operating upon
   if ! args.length # has $value
     print """
     You must specify a bug to close, either by the UID, or via the number.
@@ -756,22 +543,13 @@ cmd_close = (args) ->
 
   changeBugState $value, "closed"
 
-### 
-# 
 # Reopen a bug.
-# 
-###
-
 cmd_reopen = (args) ->
 
-    #
-    #  Get the bug.
-    #
+    # Get the bug.
     $value = args.join ''
 
-    #
-    #  Ensure we know what we're operating upon
-    #
+    # Ensure we know what we're operating upon
     if ! args.length
       print """
       You must specify a bug to reopen, either by the UID, or via the number.
@@ -783,23 +561,15 @@ cmd_reopen = (args) ->
     changeBugState $value, "open"
 
 
-### 
-# 
 # Allow a bug to be updated.
-# 
 # This mostly means:
-# 
 # 1.  find the file associated with a given bug.
 # 2.  Allow the user to edit that file.
-# 
-###
 cmd_edit = (args) ->
 
   $value = args.id
 
-  #
-  #  Ensure we know what we're operating upon
-  #
+  # Ensure we know what we're operating upon
   if ! $value
     print """
     You must specify a bug to edit, either by the UID, or via the number.
@@ -808,37 +578,24 @@ cmd_edit = (args) ->
     """
     exit 1
 
-  #
-  #  Find the bug.
-  #
+  # Find the bug.
   $bug = getBugByUIDORNumber $value
 
-  #
-  #  Edit the file the bug is stored in.
-  #
+  # Edit the file the bug is stored in.
   editFile opts.store+$bug.file
 
-  #
-  #  If there is a hook, run it.
-  #
+  # If there is a hook, run it.
   hook "edit", $bug.file
 
-### 
 # Allow a bug to be deleted.
-# 
 # This mostly means:
-# 
 # 1.  find the file associated with a given bug.
 # 2.  delete that file.
-# 
-###
 cmd_delete = (args) ->
     
     $value = args.id
 
-    #
-    #  Ensure we know what we're operating upon
-    #
+    # Ensure we know what we're operating upon
     if ! $value
         print """
         You must specify a bug to delete, either by the UID, or via the number.
@@ -847,27 +604,17 @@ cmd_delete = (args) ->
         """
         exit 1
 
-    #
-    #  Find the bug.
-    #
+    # Find the bug.
     $bug = getBugByUIDORNumber $value
 
-    #
-    #  Delete the file the bug is stored in.
-    #
+    # Delete the file the bug is stored in.
     $file = $bug.file
     fs.unlinkSync opts.store+$file
 
-    #
-    #  If there is a hook, run it.
-    #
+    # If there is a hook, run it.
     hook "delete", $bug.file
 
-###
-# 
 # Inititalise a new .klog directory.
-# 
-###
 cmd_init = ->
   if ! fs.existsSync opts.store
     fs.mkdirSync opts.store
@@ -951,10 +698,8 @@ get_required = (items, final) ->
           items.unshift item
         get_required items, final
 
-#
-#  parse opts.args and return command object
-#  should validate required options, but not their values
-#
+# parse opts.args and return command object
+# should validate required options, but not their values
 get_command = ->
   out =
     args: []
@@ -1029,12 +774,7 @@ get_command = ->
 
   return out
 
-###
-#
 # The main routine ************************************************************************************************
-#
-###
-
 main = ->
 
   # Parse the command line options.
@@ -1056,9 +796,7 @@ main = ->
     if opts.args.exit
       exit 0    
 
-    #
-    #  Ensure we received an argument.
-    #
+    # Ensure we received an argument.
 
     if opts.args.help || ! opts.args._.length
       usage()
@@ -1066,93 +804,67 @@ main = ->
     else
       opts.cmd = opts.args._.shift()
 
-    #
-    #  Decide what to do, based upon the command given.
-    #
+    # Decide what to do, based upon the command given.
     if opts.cmd.match /^init$/i
 
-      #
-      #  Initialise.
-      #
+      # Initialise.
       cmd_init()
 
     else if opts.cmd.match /^add$/i
 
-      #
-      #  Add a bug.
-      #
+      # Add a bug.
 
       cmd_add opts.command.args
 
 
     else if opts.cmd.match /^append$/i
 
-      #
-      #  Append a section of text to an existing bug report.
-      #
+      # Append a section of text to an existing bug report.
       cmd_append opts.command
 
     else if opts.cmd.match /^html$/i
 
-      #
-      #  Output bugs as a simple HTML page.
-      #
+      # Output bugs as a simple HTML page.
       cmd_html opts.args._
 
     else if opts.cmd.match /^(list|search)$/i
 
-      #
-      #  Find bugs.
-      #
+      # Find bugs.
       cmd_search opts.command
 
     else if opts.cmd.match /^open$/i
 
-      #
-      #  List only open bugs.
-      #
+      # List only open bugs.
       cmd_search opts.args._, 'open'
 
     else if opts.cmd.match /^closed$/i
 
-      #
-      #  List only closed bugs.
-      #
+      # List only closed bugs.
       cmd_search opts.args._, 'closed'
 
     else if opts.cmd.match /^view$/i
 
-      #
-      #  View a single bug.
-      #
+      # View a single bug.
       cmd_view opts.command.args
 
     else if opts.cmd.match /^close$/i
 
-      #
-      #  Mark a bug as closed.
-      #
+      # Mark a bug as closed.
       cmd_close opts.args._
 
     else if opts.cmd.match /^reopen$/i
 
-      #
-      #  Mark a bug as open.
-      #
+      # Mark a bug as open.
       cmd_reopen opts.args._
 
     else if opts.cmd.match /^edit$/i
 
-      #
-      #  Edit a bug.
-      #
+      # Edit a bug.
       cmd_edit opts.command.args
 
     else if opts.cmd.match /^delete$/i
 
-      #
-      #  Delete a bug.
-      #
+      # Delete a bug.
 
       cmd_view opts.command.args
       print "About to delete this bug..."
@@ -1163,15 +875,14 @@ main = ->
     else
       usage()
 
-#
-#  Globals
-#
+# Globals
 opts =
   ext: 'log' # file extension for data files
   date: getDate()
   store: '.klog/'
   win: process.platform == 'win32'
 
+# set project path
 path = process.cwd().split /\//
 for folder in path
   sep = if opts.win then "\\" else "/"
@@ -1212,7 +923,7 @@ glob.clrs = {
 }
 
 
-# get hooks and add them to objects
+# get hooks and add them to the glogal hook object
 hooks = {}
 if fs.existsSync "#{opts.path+opts.store}hooks"
   fs.readdirSync("#{opts.path+opts.store}hooks").forEach (file) ->
