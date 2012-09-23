@@ -222,8 +222,10 @@ usage = ->
       open                - List all currently open bugs.
       reopen              - Change a closed bug to open.
       view                - Show all details about a specific bug.
+      server              - HTTP server displays bugs, and accepts commands
 
     Options:
+      -f, --force         - no confirmation when deleting
       -t, --type          - issue type (default:bug) i.e. feature/enhance/task
       -m, --message       - Use the given message rather than spawning an editor.
       -s, --state         - Restrict matches when searching (open/closed).
