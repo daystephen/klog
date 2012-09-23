@@ -117,6 +117,7 @@ getBugs = ->
   $number = 1
   for file in files
     if file.match /\.log$/
+      $status = 'open'
       buffer = fs.readFileSync "#{opts.path+opts.store}#{file}"
       lines = buffer.toString().split /\n/
       # print content
@@ -306,8 +307,9 @@ cmd_add = (args) ->
   Title: #{$title}
   Added: #{opts.date}
   Author: #{opts.user}
-  Status: open\n\n
+  \n
   """
+  # Status: open\n\n
 
   # If we were given a message, add it to the file, and return without
   # invoking the editor.
