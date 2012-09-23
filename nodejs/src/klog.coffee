@@ -128,6 +128,8 @@ getBugs = ->
           $type = m[1]
         else if m = line.match /^(Added|Modified):(.*)/
           # ignored
+        else if m = line.match /^Author: (.*)/
+          $author = m[1]
         else if m = line.match /^UID: (.*)/
           $uid = m[1]
         else if m = line.match /^Status: (.*)/i
@@ -142,6 +144,7 @@ getBugs = ->
         status: $status
         type: $type
         title: $title
+        author: $author || 'unspecified'
 
   return $results
 
