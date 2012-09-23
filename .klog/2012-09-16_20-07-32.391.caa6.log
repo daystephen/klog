@@ -1,0 +1,21 @@
+UID: caa6
+Type: bug
+Title: hyperlink in github readme is broken
+Added: 2012-09-16_20-07-32.391
+Author: Billy Moon
+Status: open
+
+The hyperlink that connects the github page, to the project
+homepage hosted on github is broken. It seems I can not spell my
+own name!
+
+Modified: 2012-09-16_20-09-25.517
+this was a terrible mistake to make
+
+
+Modified: 2012-09-16_20-10-03.046
+Status: closed
+
+
+Modified: 2012-09-16_22-02-19.481
+Status: open

@@ -5,3 +5,10 @@ Added: 2012-09-12_08-20-45.311905
 Status: open
 
 after the -m flag, all arguments should be appended to message, not title
+
+Modified: 2012-09-16_03-20-01.361
+
+done, but a bit shaky with standard syntax (like -m="the message" or multiple flags etc...)
+
+Modified: 2012-09-16_03-20-57.327
+Status: closed

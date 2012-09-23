@@ -15,3 +15,7 @@ also...
     klog delete # brings up list of id to delete selectable by number
     klog view # same as delete, but for viewing
 
+
+Modified: 2012-09-16_03-23-57.424
+
+started adding (with new `setup` command)
