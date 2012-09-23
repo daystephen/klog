@@ -42,6 +42,7 @@ parseArgs = ->
   switches =
     d:'debug'
     x:'exit'
+    f:'force'
 
   args = process.argv
   o = {_:[],$0:[]}
@@ -597,31 +598,40 @@ cmd_edit = (args) ->
 # This mostly means:
 # 1.  find the file associated with a given bug.
 # 2.  delete that file.
-cmd_delete = (args) ->
-    
-    $value = args.id
+cmd.delete = (args) ->
+    cmd.view opts.command.args
+    do_delete = ->
+      $value = args.id
 
-    # Ensure we know what we're operating upon
-    if ! $value
-        print """
-        You must specify a bug to delete, either by the UID, or via the number.
-        For example to delete bug number 3 you'd run:
-        \n\tklog delete 3\n
-        """
-        exit 1
+      # Ensure we know what we're operating upon
+      if ! $value
+          print """
+          You must specify a bug to delete, either by the UID, or via the number.
+          For example to delete bug number 3 you'd run:
+          \n\tklog delete 3\n
+          """
+          exit 1
 
-    # Find the bug.
-    $bug = getBugByUIDORNumber $value
+      # Find the bug.
+      $bug = getBugByUIDORNumber $value
 
-    # Delete the file the bug is stored in.
-    $file = $bug.file
-    fs.unlinkSync opts.path+opts.store+$file
+      # Delete the file the bug is stored in.
+      $file = $bug.file
+      fs.unlinkSync opts.path+opts.store+$file
 
-    # If there is a hook, run it.
-    hook "delete", $bug.file
+      # If there is a hook, run it.
+      hook "delete", $bug.file
+
+    if ! args.force
+      get_confirmation ->
+        print "About to delete this bug..."
+        do_delete()
+      , "Phew, that was close!"    
+    else
+      do_delete()
 
 # Inititalise a new .klog directory.
-cmd_init = ->
+cmd.init = ->
   if ! fs.existsSync opts.store
     fs.mkdirSync opts.store
     print "#{glob.clrs.gunmetal}Now you have klogs on#{glob.clrs.reset}#{glob.clrs.red}!#{glob.clrs.reset}"
