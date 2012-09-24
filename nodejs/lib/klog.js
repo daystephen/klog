@@ -228,8 +228,8 @@ LICENSE:
       print("The bug is already $state!\r\n");
       exit(1);
     }
-    content = "\r\n\nModified: " + opts.date + "\nStatus: " + $state + "\r\n";
-    fs.appendFileSync(opts.store + $bug.file, content);
+    content = "\r\n\r\n\nModified: " + opts.date + "\nStatus: " + $state + "\r\n";
+    fs.appendFileSync(opts.path + opts.store + $bug.file, content);
     return hook($state, $bug.file);
   };
 
@@ -385,13 +385,13 @@ LICENSE:
     $bug = getBugByUIDORNumber(args.id);
     if (args.message) {
       $out = "\r\nModified: " + opts.date + "\r\n" + opts.args.message + "\r\n";
-      fs.appendFileSync(opts.store + $bug.file, $out);
+      fs.appendFileSync(opts.path + opts.store + $bug.file, $out);
       return;
     } else {
       $out = "\r\nModified: " + opts.date + "\r\n\r\n";
-      fs.appendFileSync(opts.store + $bug.file, $out);
+      fs.appendFileSync(opts.path + opts.store + $bug.file, $out);
     }
-    editFile(opts.store + $bug.file);
+    editFile(opts.path + opts.store + $bug.file);
     return hook("append", $bug.file);
   };
 
@@ -490,7 +490,6 @@ LICENSE:
 
   cmd.close = function(args) {
     var $value;
-    print(args);
     $value = args.id;
     if (!$value) {
       print("You must specify a bug to close, either by the UID, or via the number.\nFor example to close bug number 3 you'd run:\n\r\n\tklog close 3\r\n\r\n");
@@ -547,8 +546,8 @@ LICENSE:
   };
 
   cmd.init = function() {
-    if (!fs.existsSync(opts.store)) {
-      fs.mkdirSync(opts.store);
+    if (!fs.existsSync(opts.path + opts.store)) {
+      fs.mkdirSync(opts.path + opts.store);
       print("" + glob.clrs.gunmetal + "Now you have klogs on" + glob.clrs.reset + glob.clrs.red + "!" + glob.clrs.reset);
       return cmd.setup();
     } else {
@@ -560,11 +559,11 @@ LICENSE:
   cmd.setup = function() {
     var settings;
     if (opts.user && opts.email) {
-      settings = "{\n  \"user\":\"" + (opts.user || 'John Doe') + "\",\n  \"email\":\"" + (opts.email || 'john@thedoughfactory.com') + "\"\n}";
-      fs.writeFileSync("" + opts.store + ".gitignore", "local");
-      fs.mkdirSync("" + opts.store + "local");
-      fs.writeFileSync("" + opts.store + "local/settings.json", settings);
-      return print("Wrote settings to local file: " + opts.store + "local/settings.json\r\n\r\n" + settings + "\r\n");
+      settings = "{\n  \"user\":\"" + (opts.path + opts.user || 'John Doe') + "\",\n  \"email\":\"" + (opts.path + opts.email || 'john@thedoughfactory.com') + "\"\n}";
+      fs.writeFileSync("" + (opts.path + opts.store) + ".gitignore", "local");
+      fs.mkdirSync("" + (opts.path + opts.store) + "local");
+      fs.writeFileSync("" + (opts.path + opts.store) + "local/settings.json", settings);
+      return print("Wrote settings to local file: " + (opts.path + opts.store) + "local/settings.json\r\n\r\n" + settings + "\r\n");
     } else {
       return get_user_details(cmd.setup);
     }
@@ -579,7 +578,8 @@ LICENSE:
     url = require('url');
     command = function(data) {
       var args;
-      args = data.command.split(' ');
+      args = data.command.trim().split(' ');
+      print(args);
       while (process.argv.length > 2) {
         process.argv.pop();
       }
@@ -678,6 +678,7 @@ LICENSE:
       },
       append: {
         required: ['id'],
+        valid: ['message'],
         args: get_id
       },
       reopen: {
@@ -784,15 +785,15 @@ LICENSE:
     folder = path[_i];
     sep = opts.win ? "\\" : "/";
     tpath = (path.join(sep)) + sep;
-    if (fs.existsSync("" + tpath + opts.store)) {
+    if (fs.existsSync("" + (tpath + opts.store))) {
       opts.path = tpath;
       break;
     }
     path.pop();
   }
 
-  if (fs.existsSync("" + opts.path + opts.store + "/local/settings.json")) {
-    buffer = fs.readFileSync("" + opts.path + opts.store + "/local/settings.json");
+  if (fs.existsSync("" + (opts.path + opts.store) + "/local/settings.json")) {
+    buffer = fs.readFileSync("" + (opts.path + opts.store) + "/local/settings.json");
     settings = JSON.parse(buffer.toString());
     opts = _.extend(opts, settings);
   }
