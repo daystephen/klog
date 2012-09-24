@@ -5,3 +5,8 @@ Added: 2012-09-12_17-03-53.609142
 Status: open
 
 there should be a funciton handling the calling of hooks, allowing for it to develop further in the future, possibly to include pre and post action hooks, maybe separated by action name
+
+
+
+Modified: 2012-09-19_04-42-40.576
+Status: closed

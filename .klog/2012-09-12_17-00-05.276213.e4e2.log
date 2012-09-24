@@ -7,3 +7,15 @@ Status: open
 comments should be part of the system, possibly allowing code, using markdown. comments shuld be listed in the search view, and should track who has seen them so that they can work like an unread count, and other people can see who has read the comments
 
 it should be easy to reference commit hashes from comments
+
+Modified: 2012-09-19_04-39-09.435
+
+This can be handled purely by append - so maybe comment should be an alias of that
+
+Modified: 2012-09-19_04-40-59.455
+comments should be shown as clearly distinct in the web view
+
+
+
+Modified: 2012-09-19_04-42-02.117
+Status: closed

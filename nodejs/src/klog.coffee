@@ -256,12 +256,12 @@ changeBugState = ($value, $state) ->
     exit 1
 
   # Now write out the new status section.
-  content = """\r\n
+  content = """\r\n\r\n
   Modified: #{opts.date}
   Status: #{$state}\r\n
   """
 
-  fs.appendFileSync opts.store+$bug.file, content
+  fs.appendFileSync opts.path+opts.store+$bug.file, content
 
   # If there is a hook, run it.
   hook $state, $bug.file
@@ -440,14 +440,14 @@ cmd.append = (args) ->
     # If we were given a message add it, otherwise spawn the editor.
     if args.message
       $out = "\r\nModified: #{opts.date}\r\n#{opts.args.message}\r\n"
-      fs.appendFileSync opts.store+$bug.file, $out
+      fs.appendFileSync opts.path+opts.store+$bug.file, $out
       return
     else
       $out = "\r\nModified: #{opts.date}\r\n\r\n"
-      fs.appendFileSync opts.store+$bug.file, $out      
+      fs.appendFileSync opts.path+opts.store+$bug.file, $out      
 
     # Allow the user to make the edits.
-    editFile opts.store+$bug.file
+    editFile opts.path+opts.store+$bug.file
 
     ## BROKEN due to separate process ##
     # # Once it was saved remove the lines that mention "# klog: "
@@ -668,7 +668,6 @@ cmd.view = (args) ->
 # Close a given bug.
 cmd.close = (args) ->
 
-  print args
   # Get the bug.
   $value = args.id
 
@@ -765,8 +764,8 @@ cmd.delete = (args) ->
 
 # Inititalise a new .klog directory.
 cmd.init = ->
-  if ! fs.existsSync opts.store
-    fs.mkdirSync opts.store
+  if ! fs.existsSync opts.path+opts.store
+    fs.mkdirSync opts.path+opts.store
     print "#{glob.clrs.gunmetal}Now you have klogs on#{glob.clrs.reset}#{glob.clrs.red}!#{glob.clrs.reset}"
     cmd.setup()
   else
@@ -777,14 +776,14 @@ cmd.setup = ->
   if opts.user && opts.email
     settings = """
     {
-      "user":"#{opts.user || 'John Doe'}",
-      "email":"#{opts.email || 'john@thedoughfactory.com'}"
+      "user":"#{opts.path+opts.user || 'John Doe'}",
+      "email":"#{opts.path+opts.email || 'john@thedoughfactory.com'}"
     }
     """
-    fs.writeFileSync "#{opts.store}.gitignore","local"
-    fs.mkdirSync "#{opts.store}local"
-    fs.writeFileSync "#{opts.store}local/settings.json", settings
-    print "Wrote settings to local file: #{opts.store}local/settings.json\r\n\r\n#{settings}\r\n"
+    fs.writeFileSync "#{opts.path+opts.store}.gitignore","local"
+    fs.mkdirSync "#{opts.path+opts.store}local"
+    fs.writeFileSync "#{opts.path+opts.store}local/settings.json", settings
+    print "Wrote settings to local file: #{opts.path+opts.store}local/settings.json\r\n\r\n#{settings}\r\n"
   else
     get_user_details cmd.setup
 
@@ -800,7 +799,8 @@ cmd.server = ->
   command = (data) ->
     # POST = JSON.parse POST
     # opts.args._.push data.command.split ' '
-    args = data.command.split ' '
+    args = data.command.trim().split ' '
+    print args
     while process.argv.length > 2
       process.argv.pop()
     _.each args, (v) ->
@@ -881,6 +881,7 @@ get_command = ->
       args: get_id
     append:
       required: ['id']
+      valid: ['message']
       args: get_id
     reopen:
       required: ['id']
@@ -982,14 +983,14 @@ path = process.cwd().split /\//
 for folder in path
   sep = if opts.win then "\\" else "/"
   tpath = (path.join sep)+sep
-  if fs.existsSync "#{tpath}#{opts.store}"
+  if fs.existsSync "#{tpath+opts.store}"
     opts.path = tpath
     break
   path.pop()
 
 # Read settings (including `user` and `email`)
-if fs.existsSync "#{opts.path}#{opts.store}/local/settings.json"
-  buffer = fs.readFileSync "#{opts.path}#{opts.store}/local/settings.json"
+if fs.existsSync "#{opts.path+opts.store}/local/settings.json"
+  buffer = fs.readFileSync "#{opts.path+opts.store}/local/settings.json"
   settings = JSON.parse buffer.toString()
   opts = _.extend opts, settings
 
