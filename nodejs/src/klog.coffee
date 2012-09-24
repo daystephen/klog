@@ -119,7 +119,7 @@ getBugs = ->
     if file.match /\.log$/
       $status = 'open'
       buffer = fs.readFileSync "#{opts.path+opts.store}#{file}"
-      lines = buffer.toString().split /\n/
+      lines = buffer.toString().split /[\r\n]+/
       # print content
       $body = []
       for line in lines
@@ -171,7 +171,7 @@ getBugByUIDORNumber = ($arg) ->
 
     if $bug
       return $bug
-  print "Bug not found: #{$arg}\n"
+  print "Bug not found: #{$arg}\r\n"
   exit 1
 
 # Exit app with error code
@@ -199,7 +199,7 @@ remove_comments = ($file) ->
     print "Failed to open #{$file}"
     exit 
 
-  content = buffer.toString().replace /^# klog:.*\n/mg, ''
+  content = buffer.toString().replace /^# klog:.*(\r\n|\n|\r)/mg, ''
   # Write the contents, removing any lines matching our marker-pattern
   fs.writeFileSync $file, content
 
@@ -252,13 +252,13 @@ changeBugState = ($value, $state) ->
 
   # Ensure the bug isn't already in the specified state.
   if $bug.status == $state
-    print "The bug is already $state!\n"
+    print "The bug is already $state!\r\n"
     exit 1
 
   # Now write out the new status section.
-  content = """\n
+  content = """\r\n
   Modified: #{opts.date}
-  Status: #{$state}\n
+  Status: #{$state}\r\n
   """
 
   fs.appendFileSync opts.store+$bug.file, content
@@ -283,7 +283,7 @@ get_message = (callback)->
     callback()
 
 write_file = ->
-  fs.writeFileSync opts.args.file, opts.args.template + opts.args.message+ "\n"
+  fs.writeFileSync opts.args.file, opts.args.template + opts.args.message+ "\r\n"
 
 get_items = ->
   if ! opts.args.title
@@ -299,19 +299,19 @@ get_user_details = (callback) ->
   else
     exec 'git config --get user.email', (se,so,e) ->
       if so.length
-        opts.email = so.replace /\n/, ''
+        opts.email = so.replace /[\r\n]+/, ''
         exec 'git config --get user.name', (se,so,e) ->
           if so.length
-            opts.user = so.replace /\n/, ''
+            opts.user = so.replace /[\r\n]+/, ''
           else
             opts.user = opts.email.replace /@.+$/, ''
           callback()
       else
         print """
         Tried to get email address from Git, but could not determine using:
-        \n\tgit config --get user.email\n
+        \r\n\tgit config --get user.email\r\n
         It might be a good idea to set it with:
-        \n\tgit config etc...\n
+        \r\n\tgit config etc...\r\n
         """
         print "Please enter your details... (leave blank to abort)"
         stdin = process.openStdin()
@@ -379,14 +379,14 @@ cmd.add = (args) ->
   Title: #{$title}
   Added: #{opts.date}
   Author: #{opts.user}
-  \n
+  \r\n
   """
-  # Status: open\n\n
+  # Status: open\r\n\r\n
 
   # If we were given a message, add it to the file, and return without
   # invoking the editor.
   if args.message
-    fs.writeFileSync opts.path+opts.store+opts.args.file, opts.args.template + args.message+ "\n"
+    fs.writeFileSync opts.path+opts.store+opts.args.file, opts.args.template + args.message+ "\r\n"
     # If there is a hook, run it.
     hook "add", opts.args.file
     return
@@ -402,7 +402,7 @@ cmd.add = (args) ->
     # klog:
     # klog:  Lines beginning with "# klog:" will be ignored, and removed,
     # klog: this file is saved.
-    # klog:\n
+    # klog:\r\n
     """
 
     fs.writeFileSync opts.args.file, opts.args.template
@@ -428,7 +428,7 @@ cmd.append = (args) ->
       print """
       You must specify a bug to append to, either by the UID, or via the number.
       For example to append text to bug number 3 you'd run:
-      \n\tklog append 3\n
+      \r\n\tklog append 3\r\n
       """
       exit 1
 
@@ -437,11 +437,11 @@ cmd.append = (args) ->
 
     # If we were given a message add it, otherwise spawn the editor.
     if args.message
-      $out = "\nModified: #{opts.date}\n#{opts.args.message}\n"
+      $out = "\r\nModified: #{opts.date}\r\n#{opts.args.message}\r\n"
       fs.appendFileSync opts.store+$bug.file, $out
       return
     else
-      $out = "\nModified: #{opts.date}\n\n"
+      $out = "\r\nModified: #{opts.date}\r\n\r\n"
       fs.appendFileSync opts.store+$bug.file, $out      
 
     # Allow the user to make the edits.
@@ -543,7 +543,7 @@ cmd.html = (args) ->
           <li>Author: #{$b.author}</li>
           <li>Type: #{$b.type}</li>
         </ul>
-        <p>#{$b.body.join "\n"}</p>
+        <p>#{$b.body.join "\r\n"}</p>
       </div>
     """
   out += """
@@ -559,7 +559,7 @@ cmd.html = (args) ->
           <li>Author: #{$b.author}</li>
           <li>Type: #{$b.type}</li>
         </ul>
-        <p>#{$b.body.join "\n"}</p>
+        <p>#{$b.body.join "\r\n"}</p>
       </div>
     """
   out += """
@@ -625,7 +625,7 @@ cmd.search = (args) ->
     continue unless $match
 
     # Otherwise show a summary of the bug.
-    # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\n";
+    # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\r\n";
     # removed number: ##{$b_number} 
     hl = if $b_status == 'open' then glob.clrs.green else glob.clrs.red
     cb = glob.clrs.bright
@@ -643,15 +643,15 @@ cmd.view = (args) ->
 
   # Ensure we know what we're operating upon
   if ! $value # there is not a $value
-    print "You must specify a bug to view, either by the UID, or via the number.\n"
-    print "\nFor example to view bug number 3 you'd run:\n"
-    print "\tklog view 3\n\n";
+    print "You must specify a bug to view, either by the UID, or via the number.\r\n"
+    print "\r\nFor example to view bug number 3 you'd run:\r\n"
+    print "\tklog view 3\r\n\r\n";
 
-    print "Maybe a list of open bugs will help you:\n\n"
+    print "Maybe a list of open bugs will help you:\r\n\r\n"
 
     cmd.search()
 
-    print "\n"
+    print "\r\n"
 
     exit 1
 
@@ -675,7 +675,7 @@ cmd.close = (args) ->
     print """
     You must specify a bug to close, either by the UID, or via the number.
     For example to close bug number 3 you'd run:
-    \n\tklog close 3\n\n
+    \r\n\tklog close 3\r\n\r\n
     """
     exit 1
 
@@ -692,7 +692,7 @@ cmd.reopen = (args) ->
       print """
       You must specify a bug to reopen, either by the UID, or via the number.
       For example to reopen bug number 3 you'd run:
-      \n\tklog reopen 3
+      \r\n\tklog reopen 3
       """
       exit 1
 
@@ -712,7 +712,7 @@ cmd.edit = (args) ->
     print """
     You must specify a bug to edit, either by the UID, or via the number.
     For example to edit bug number 3 you'd run:
-    \n\tklog edit 3\n\n
+    \r\n\tklog edit 3\r\n\r\n
     """
     exit 1
 
@@ -739,7 +739,7 @@ cmd.delete = (args) ->
           print """
           You must specify a bug to delete, either by the UID, or via the number.
           For example to delete bug number 3 you'd run:
-          \n\tklog delete 3\n
+          \r\n\tklog delete 3\r\n
           """
           exit 1
 
@@ -782,7 +782,7 @@ cmd.setup = ->
     fs.writeFileSync "#{opts.store}.gitignore","local"
     fs.mkdirSync "#{opts.store}local"
     fs.writeFileSync "#{opts.store}local/settings.json", settings
-    print "Wrote settings to local file: #{opts.store}local/settings.json\n\n#{settings}\n"
+    print "Wrote settings to local file: #{opts.store}local/settings.json\r\n\r\n#{settings}\r\n"
   else
     get_user_details cmd.setup
 
