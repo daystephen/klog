@@ -877,6 +877,7 @@ get_command = ->
       args: get_id
     edit:
       required: ['id']
+      valid: ['editor']
       args: get_id
     append:
       required: ['id']
