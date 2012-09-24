@@ -187,7 +187,8 @@ exit = (code) ->
 # or as a last resort vim or notepad depending on platform.
 editFile = (file) ->
   # Open the editor
-  $editor = opts.args.editor || process.env.EDITOR || (opts.win ?  'notepad' : "vim");
+  $editor = opts.args.editor ? opts.args.editor : process.env.EDITOR ? process.env.EDITOR : (opts.win) ? "notepad" : "vim"
+  $editor = if opts.args.editor then opts.args.editor else if  process.env.EDITOR then process.env.EDITOR else if opts.win then "notepad" else "vim"
   exec "#{$editor} #{file}"
 
 # Remove the "# klog: " prefix from the given file.
