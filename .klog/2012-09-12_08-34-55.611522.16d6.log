@@ -5,3 +5,7 @@ Added: 2012-09-12_08-34-55.611522
 Status: open
 
 it is too easy to delete an issue - and although they are tracked in theory via git - a confirmation would be nice. Probably enough to have default answer of Y - just meaning you must double tap enter, and with some details about the bug - like title etc... first.
+
+
+Modified: 2012-09-19_04-32-53.774
+Status: closed

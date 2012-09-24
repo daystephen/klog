@@ -1,0 +1,7 @@
+UID: 2d0e
+Type: feature
+Title: allow multiple close in one command
+Added: 2012-09-19_04-34-15.681
+Author: undefined
+
+allow `klog close eefc effa e433 566c` for example to close four bugs in one shot
