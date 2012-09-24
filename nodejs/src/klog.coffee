@@ -1017,7 +1017,7 @@ glob.clrs = {
   back_black:"\u001b[40m",
   back_silver:"\u001b[47m",
 
-  reset:"\u001b[m\u000f"
+  reset:"\u001b[m"
 
 }
 
