@@ -119,7 +119,7 @@ LICENSE:
       if (file.match(/\.log$/)) {
         $status = 'open';
         buffer = fs.readFileSync("" + (opts.path + opts.store) + file);
-        lines = buffer.toString().split(/\n/);
+        lines = buffer.toString().split(/[\r\n]+/);
         $body = [];
         for (_j = 0, _len1 = lines.length; _j < _len1; _j++) {
           line = lines[_j];
@@ -177,7 +177,7 @@ LICENSE:
         return $bug;
       }
     }
-    print("Bug not found: " + $arg + "\n");
+    print("Bug not found: " + $arg + "\r\n");
     return exit(1);
   };
 
@@ -188,10 +188,8 @@ LICENSE:
   };
 
   editFile = function(file) {
-    var $editor, _ref;
-    $editor = opts.args.editor || process.env.EDITOR || ((_ref = opts.win) != null ? _ref : {
-      'notepad': "vim"
-    });
+    var $editor;
+    $editor = opts.args.editor ? opts.args.editor : process.env.EDITOR ? process.env.EDITOR : opts.win ? "notepad" : "vim";
     return exec("" + $editor + " " + file);
   };
 
@@ -204,7 +202,7 @@ LICENSE:
       exit;
 
     }
-    content = buffer.toString().replace(/^# klog:.*\n/mg, '');
+    content = buffer.toString().replace(/^# klog:.*(\r\n|\n|\r)/mg, '');
     return fs.writeFileSync($file, content);
   };
 
@@ -227,10 +225,10 @@ LICENSE:
     }
     $bug = getBugByUIDORNumber($value);
     if ($bug.status === $state) {
-      print("The bug is already $state!\n");
+      print("The bug is already $state!\r\n");
       exit(1);
     }
-    content = "\n\nModified: " + opts.date + "\nStatus: " + $state + "\n";
+    content = "\r\n\nModified: " + opts.date + "\nStatus: " + $state + "\r\n";
     fs.appendFileSync(opts.store + $bug.file, content);
     return hook($state, $bug.file);
   };
@@ -258,7 +256,7 @@ LICENSE:
   };
 
   write_file = function() {
-    return fs.writeFileSync(opts.args.file, opts.args.template + opts.args.message + "\n");
+    return fs.writeFileSync(opts.args.file, opts.args.template + opts.args.message + "\r\n");
   };
 
   get_items = function() {
@@ -278,24 +276,24 @@ LICENSE:
       return exec('git config --get user.email', function(se, so, e) {
         var stdin;
         if (so.length) {
-          opts.email = so.replace(/\n/, '');
+          opts.email = so.replace(/[\r\n]+/, '');
           return exec('git config --get user.name', function(se, so, e) {
             if (so.length) {
-              opts.user = so.replace(/\n/, '');
+              opts.user = so.replace(/[\r\n]+/, '');
             } else {
               opts.user = opts.email.replace(/@.+$/, '');
             }
             return callback();
           });
         } else {
-          print("Tried to get email address from Git, but could not determine using:\n\n\tgit config --get user.email\n\nIt might be a good idea to set it with:\n\n\tgit config etc...\n");
+          print("Tried to get email address from Git, but could not determine using:\n\r\n\tgit config --get user.email\r\n\nIt might be a good idea to set it with:\n\r\n\tgit config etc...\r\n");
           print("Please enter your details... (leave blank to abort)");
           stdin = process.openStdin();
           process.stdout.write("Name: ");
           return stdin.addListener("data", function(d) {
-            if (!opts.user && (opts.user = d.toString().substring(0, d.length - 1))) {
+            if (!opts.user && (opts.user = d.toString().trim())) {
               return process.stdout.write("Email: ");
-            } else if (!opts.email && (opts.email = d.toString().substring(0, d.length - 1))) {
+            } else if (!opts.email && (opts.email = d.toString().trim())) {
               process.stdin.destroy();
               return callback();
             } else {
@@ -328,7 +326,7 @@ LICENSE:
 
   get_required = function(items, final) {
     var item, stdin, _ref;
-    stdin = process.openStdin();
+    stdin = process.stdin;
     if (!(items != null ? items.length : void 0)) {
       stdin.pause();
       if (!((_ref = opts.command.needs) != null ? _ref.length : void 0)) {
@@ -341,8 +339,10 @@ LICENSE:
       }
       if (!opts.args[item] && item) {
         process.stdout.write("" + item + ": ");
+        stdin.resume();
         return stdin.once('data', function(d) {
           var line;
+          stdin.pause();
           line = d.toString().trim();
           if (line) {
             opts.command.args[item] = line;
@@ -363,12 +363,12 @@ LICENSE:
     $title = args.title;
     $type = args.type || 'bug';
     opts.args.file = "" + opts.date + "." + $uid + ".log";
-    opts.args.template = "UID: " + $uid + "\nType: " + $type + "\nTitle: " + $title + "\nAdded: " + opts.date + "\nAuthor: " + opts.user + "\n\n";
+    opts.args.template = "UID: " + $uid + "\nType: " + $type + "\nTitle: " + $title + "\nAdded: " + opts.date + "\nAuthor: " + opts.user + "\n\r\n";
     if (args.message) {
-      fs.writeFileSync(opts.path + opts.store + opts.args.file, opts.args.template + args.message + "\n");
+      fs.writeFileSync(opts.path + opts.store + opts.args.file, opts.args.template + args.message + "\r\n");
       hook("add", opts.args.file);
     } else {
-      opts.args.template += "# klog:\n# klog:  Enter your bug report here; it is better to write too much than\n# klog: too little.\n# klog:\n# klog:  Lines beginning with \"# klog:\" will be ignored, and removed,\n# klog: this file is saved.\n# klog:\n";
+      opts.args.template += "# klog:\n# klog:  Enter your bug report here; it is better to write too much than\n# klog: too little.\n# klog:\n# klog:  Lines beginning with \"# klog:\" will be ignored, and removed,\n# klog: this file is saved.\n# klog:\r\n";
       fs.writeFileSync(opts.args.file, opts.args.template);
       editFile(opts.args.file);
       remove_comments(opts.args.file);
@@ -379,16 +379,16 @@ LICENSE:
   cmd.append = function(args) {
     var $bug, $out;
     if (!args.id) {
-      print("You must specify a bug to append to, either by the UID, or via the number.\nFor example to append text to bug number 3 you'd run:\n\n\tklog append 3\n");
+      print("You must specify a bug to append to, either by the UID, or via the number.\nFor example to append text to bug number 3 you'd run:\n\r\n\tklog append 3\r\n");
       exit(1);
     }
     $bug = getBugByUIDORNumber(args.id);
     if (args.message) {
-      $out = "\nModified: " + opts.date + "\n" + opts.args.message + "\n";
+      $out = "\r\nModified: " + opts.date + "\r\n" + opts.args.message + "\r\n";
       fs.appendFileSync(opts.store + $bug.file, $out);
       return;
     } else {
-      $out = "\nModified: " + opts.date + "\n\n";
+      $out = "\r\nModified: " + opts.date + "\r\n\r\n";
       fs.appendFileSync(opts.store + $bug.file, $out);
     }
     editFile(opts.store + $bug.file);
@@ -413,12 +413,12 @@ LICENSE:
     out = "<!DOCTYPE HTML>\n<html lang=\"en-US\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>klog : issue tracking and time management</title>\n  <style type='text/css'>\n  body{\n    font-family: century gothic;\n  }\n  .bug {\n    background-color: silver;\n    border-radius: 0.5em 0.5em 0.5em 0.5em;\n    margin: 0.5em 0;\n    padding: 0.3em 1em;\n  }\n  #command-intro {\n    padding-left: 0.5em;\n    width: 37px;\n  }\n  input {\n    background-color: black;\n    border: medium none;\n    color: silver;\n    float: left;\n    height: 2em;\n    margin: 0;\n    padding: 0;\n  }\n  h1, h2, h3, h4, h5, h6, p, ul{\n    clear: both;\n  }\n  #command{\n    width: 40em\n  }\n  #execute{\n    border-left: 1px solid red\n  }\n  </style>\n</head>\n<body onload=\"document.getElementById('command').focus()\">\n  \n  <h1>Klog : issue tracking and time management</h1>\n\n  <ul>\n    <li><a href='#open' class='button'>" + $open_count + " : open bugs</a></li>\n    <li><a href='#closed' class='button'>" + $closed_count + " : closed bugs</a></li>\n  </ul>\n\n  <form action='.' method='POST'>\n    <input type=\"text\" value=\"$ klog\" readonly=\"readonly\" name=\"intro\" id=\"command-intro\">\n    <input type=\"text\" name=\"command\" id=\"command\">\n    <input type=\"submit\" id=\"execute\" value=\"execute!\">\n  </form>\n\n  <a name='open'></a>\n  <h2 id=\"open\">Open bugs</h2>";
     for (_j = 0, _len1 = $open.length; _j < _len1; _j++) {
       $b = $open[_j];
-      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul>\n    <li>UID: " + $b.uid + "</li>\n    <li>Added: " + $b.added + "</li>\n    <li>Author: " + $b.author + "</li>\n    <li>Type: " + $b.type + "</li>\n  </ul>\n  <p>" + ($b.body.join("\n")) + "</p>\n</div>";
+      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul>\n    <li>UID: " + $b.uid + "</li>\n    <li>Added: " + $b.added + "</li>\n    <li>Author: " + $b.author + "</li>\n    <li>Type: " + $b.type + "</li>\n  </ul>\n  <p>" + ($b.body.join("\r\n")) + "</p>\n</div>";
     }
     out += "<h2 id=\"closed\">Closed bugs</h2>";
     for (_k = 0, _len2 = $closed.length; _k < _len2; _k++) {
       $b = $closed[_k];
-      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul>\n    <li>UID: " + $b.uid + "</li>\n    <li>Added: " + $b.added + "</li>\n    <li>Author: " + $b.author + "</li>\n    <li>Type: " + $b.type + "</li>\n  </ul>\n  <p>" + ($b.body.join("\n")) + "</p>\n</div>";
+      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul>\n    <li>UID: " + $b.uid + "</li>\n    <li>Added: " + $b.added + "</li>\n    <li>Author: " + $b.author + "</li>\n    <li>Type: " + $b.type + "</li>\n  </ul>\n  <p>" + ($b.body.join("\r\n")) + "</p>\n</div>";
     }
     out += "  <div id=\"foot\">\n    Generated by <a href=\"http://billymoon.github.com/klog/\">klog</a>.\n  </div>\n</body>\n</html>";
     if (args["return"]) {
@@ -475,12 +475,12 @@ LICENSE:
     var $bug, $value, buffer;
     $value = args.id;
     if (!$value) {
-      print("You must specify a bug to view, either by the UID, or via the number.\n");
-      print("\nFor example to view bug number 3 you'd run:\n");
-      print("\tklog view 3\n\n");
-      print("Maybe a list of open bugs will help you:\n\n");
+      print("You must specify a bug to view, either by the UID, or via the number.\r\n");
+      print("\r\nFor example to view bug number 3 you'd run:\r\n");
+      print("\tklog view 3\r\n\r\n");
+      print("Maybe a list of open bugs will help you:\r\n\r\n");
       cmd.search();
-      print("\n");
+      print("\r\n");
       exit(1);
     }
     $bug = getBugByUIDORNumber($value);
@@ -493,7 +493,7 @@ LICENSE:
     print(args);
     $value = args.id;
     if (!$value) {
-      print("You must specify a bug to close, either by the UID, or via the number.\nFor example to close bug number 3 you'd run:\n\n\tklog close 3\n\n");
+      print("You must specify a bug to close, either by the UID, or via the number.\nFor example to close bug number 3 you'd run:\n\r\n\tklog close 3\r\n\r\n");
       exit(1);
     }
     return changeBugState($value, "closed");
@@ -503,7 +503,7 @@ LICENSE:
     var $value;
     $value = args.id;
     if (!$value) {
-      print("You must specify a bug to reopen, either by the UID, or via the number.\nFor example to reopen bug number 3 you'd run:\n\n\tklog reopen 3");
+      print("You must specify a bug to reopen, either by the UID, or via the number.\nFor example to reopen bug number 3 you'd run:\n\r\n\tklog reopen 3");
       exit(1);
     }
     return changeBugState($value, "open");
@@ -513,7 +513,7 @@ LICENSE:
     var $bug, $value;
     $value = args.id;
     if (!$value) {
-      print("You must specify a bug to edit, either by the UID, or via the number.\nFor example to edit bug number 3 you'd run:\n\n\tklog edit 3\n\n");
+      print("You must specify a bug to edit, either by the UID, or via the number.\nFor example to edit bug number 3 you'd run:\n\r\n\tklog edit 3\r\n\r\n");
       exit(1);
     }
     $bug = getBugByUIDORNumber($value);
@@ -528,7 +528,7 @@ LICENSE:
       var $bug, $file, $value;
       $value = args.id;
       if (!$value) {
-        print("You must specify a bug to delete, either by the UID, or via the number.\nFor example to delete bug number 3 you'd run:\n\n\tklog delete 3\n");
+        print("You must specify a bug to delete, either by the UID, or via the number.\nFor example to delete bug number 3 you'd run:\n\r\n\tklog delete 3\r\n");
         exit(1);
       }
       $bug = getBugByUIDORNumber($value);
@@ -564,7 +564,7 @@ LICENSE:
       fs.writeFileSync("" + opts.store + ".gitignore", "local");
       fs.mkdirSync("" + opts.store + "local");
       fs.writeFileSync("" + opts.store + "local/settings.json", settings);
-      return print("Wrote settings to local file: " + opts.store + "local/settings.json\n\n" + settings + "\n");
+      return print("Wrote settings to local file: " + opts.store + "local/settings.json\r\n\r\n" + settings + "\r\n");
     } else {
       return get_user_details(cmd.setup);
     }
@@ -673,6 +673,7 @@ LICENSE:
       },
       edit: {
         required: ['id'],
+        valid: ['editor'],
         args: get_id
       },
       append: {
@@ -818,7 +819,7 @@ LICENSE:
     back_yellow: "\u001b[43m",
     back_black: "\u001b[40m",
     back_silver: "\u001b[47m",
-    reset: "\u001b[m\u000f"
+    reset: "\u001b[m"
   };
 
   hooks = {};
