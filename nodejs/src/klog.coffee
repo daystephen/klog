@@ -340,7 +340,7 @@ get_confirmation = (callback, message) ->
       exit 1
 
 get_required = (items, final) ->
-  stdin = process.openStdin()
+  stdin = process.stdin
   if ! items?.length
     stdin.pause()
     if ! opts.command.needs?.length
@@ -351,7 +351,9 @@ get_required = (items, final) ->
       item = items.shift()
     if ! opts.args[item] && item
       process.stdout.write "#{item}: "
+      stdin.resume()
       stdin.once 'data', (d) ->
+        stdin.pause()
         line = d.toString().trim()
         if line
           opts.command.args[item] = line
