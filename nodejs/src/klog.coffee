@@ -318,9 +318,9 @@ get_user_details = (callback) ->
         stdin = process.openStdin()
         process.stdout.write "Name: "
         stdin.addListener "data", (d) ->
-          if ! opts.user && opts.user = d.toString().substring(0, d.length-1)
+          if ! opts.user && opts.user = d.toString().trim()
             process.stdout.write "Email: "
-          else if ! opts.email && opts.email = d.toString().substring(0, d.length-1)
+          else if ! opts.email && opts.email = d.toString().trim()
             process.stdin.destroy()
             callback()
           else
