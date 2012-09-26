@@ -40,6 +40,7 @@ parseArgs = ->
 
   # simple toggels, don't consume next argument
   switches =
+    a:'all'
     d:'debug'
     x:'exit'
     f:'force'
@@ -620,10 +621,14 @@ cmd.search = (args) ->
     # If there are search terms then search the title.
     # All terms must match.
     $match = 1
+    $b_body = $bug.body.join('').replace(/(\\.|[^\w\s])/g,'')
+    # print $b_body
+    pool = if args.all then $bug.title+$bug.type+$b_body else $bug.title
     if args.terms # there are $terms
-      for $term in $terms.split /[ \t]/
-        if ! $b_title.match new RegExp $term, 'i'
+      for $term in $terms.split /[ \t]+/
+        if ! pool.match new RegExp $term, 'i'
           $match = 0
+
     # If we didn't find a match move on.
     continue unless $match
 
