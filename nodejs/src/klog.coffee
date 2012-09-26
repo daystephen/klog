@@ -45,6 +45,7 @@ parseArgs = ->
     x:'exit'
     f:'force'
     p:'plain' # no colours in output, and lean towards formatting suited to scripts
+    r:'return'
 
   args = process.argv
   o = {_:[],$0:[]}
@@ -173,7 +174,23 @@ getBugByUIDORNumber = ($arg) ->
 
     if $bug
       return $bug
-  print "Bug not found: #{$arg}\r\n"
+
+  print "Last resort, trying to search (open issues) for: #{glob.clrs.yellow}#{$arg}#{glob.clrs.reset}"
+  bug = cmd.search
+    return: true
+    terms: $arg
+    state: 'open'
+  if bug
+    hl = if bug.status == 'open' then glob.clrs.green else glob.clrs.red
+    cb = glob.clrs.bright
+    ch = glob.clrs.yellow
+    cr = glob.clrs.reset
+    print "Found: %#{hl}#{bug.uid}#{glob.clrs.reset} [#{ch}#{bug.status}#{cr}] [#{ch+cb}#{bug.type}#{cr}] #{bug.title}"
+    return bug
+  # else
+  #   print bug
+
+  print "Bug not found!!"
   exit 1
 
 # Exit app with error code
@@ -597,6 +614,8 @@ cmd.search = (args) ->
 
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
+  found = []
+  out = []
   # For each bug
   for $bug in $bugs
 
@@ -632,6 +651,8 @@ cmd.search = (args) ->
     # If we didn't find a match move on.
     continue unless $match
 
+    found.push $bug
+
     # Otherwise show a summary of the bug.
     # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\r\n";
     # removed number: ##{$b_number} 
@@ -640,6 +661,12 @@ cmd.search = (args) ->
     ch = glob.clrs.yellow
     cr = glob.clrs.reset
     print "%#{hl}#{$b_uid}#{glob.clrs.reset} [#{ch}#{$b_status}#{cr}] [#{ch+cb}#{$b_type}#{cr}] #{$b_title}"
+  if args.return
+    if found.length == 1
+      return found[0]
+    print out.join "\r\n"
+  else
+    print out.join "\r\n"
 
 # View a specific bug.
 # This means:
