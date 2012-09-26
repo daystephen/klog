@@ -139,7 +139,7 @@ getBugs = ->
         else if m = line.match /^Status: (.*)/i
           $status = m[1]
         else
-          $body.push line
+          $body.push "\r\n"+line
       $results.push
         file: file
         body: $body
@@ -275,9 +275,9 @@ changeBugState = ($value, $state) ->
     exit 1
 
   # Now write out the new status section.
-  content = """\r\n\r\n
+  content = """\r\n
   Modified: #{opts.date}
-  Status: #{$state}\r\n
+  Status: #{$state}
   """
 
   fs.appendFileSync opts.path+opts.store+$bug.file, content
@@ -296,7 +296,7 @@ get_title = (callback)->
 get_message = (callback)->
   stdin = process.openStdin()
   process.stdout.write "Message: "
-  print stdin.addListener "data", (d) ->
+  stdin.addListener "data", (d) ->
     opts.args.message = d.toString().substring(0, d.length-1)
     process.stdin.destroy()
     callback()
@@ -407,7 +407,10 @@ cmd.add = (args) ->
   # If we were given a message, add it to the file, and return without
   # invoking the editor.
   if args.message
-    fs.writeFileSync opts.path+opts.store+opts.args.file, opts.args.template + args.message+ "\r\n"
+    fs.writeFileSync opts.path+opts.store+opts.args.file, opts.args.template + args.message
+
+    print "added issue %#{glob.clrs.yellow}#{$uid}#{glob.clrs.reset}"
+
     # If there is a hook, run it.
     hook "add", opts.args.file
     return
@@ -434,6 +437,8 @@ cmd.add = (args) ->
     # Once it was saved remove the lines that mention "# klog: "
     remove_comments opts.args.file
 
+    print "added issue %#{glob.clrs.yellow}#{$uid}#{glob.clrs.reset}"
+
     # If there is a hook, run it.
     hook "add", opts.args.file
 
@@ -457,8 +462,13 @@ cmd.append = (args) ->
     $bug = getBugByUIDORNumber args.id
 
     # If we were given a message add it, otherwise spawn the editor.
+    # redundant when the message argument is required
     if args.message
-      $out = "\r\nModified: #{opts.date}\r\n#{opts.args.message}\r\n"
+      $out = "\r\n\r\nModified: #{opts.date}\r\n"
+      if args.type
+        $out += "Type: #{args.type}\r\n"
+      if args.message != '.'
+        $out += "#{args.message}"
       fs.appendFileSync opts.path+opts.store+$bug.file, $out
       return
     else
@@ -619,22 +629,14 @@ cmd.search = (args) ->
   # For each bug
   for $bug in $bugs
 
-    # Find basic meta-data.
-    $b_title  = $bug.title
-    $b_type   = $bug.type
-    $b_status = $bug.status
-    $b_uid    = $bug.uid
-    $b_file   = $bug.file
-    $b_number = $bug.number
-
     # If the user is being specific about status then
     # skip ones that don't match, as this is cheap.
-    if $state != "all" and $state.toLowerCase() != $b_status.toLowerCase()
+    if $state != "all" and $state.toLowerCase() != $bug.status.toLowerCase()
       continue
 
     # If the user is being specific about type then
     # skip ones that don't match
-    if $type != "all" and $type.toLowerCase() != $b_type.toLowerCase()
+    if $type != "all" and $type.toLowerCase() != $bug.type.toLowerCase()
       continue
 
     # If there are search terms then search the title.
@@ -654,13 +656,14 @@ cmd.search = (args) ->
     found.push $bug
 
     # Otherwise show a summary of the bug.
-    # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\r\n";
+    # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $bug.uid, "[".$bug.status."]", "[".$bug.type."]", $bug.title . "\r\n";
     # removed number: ##{$b_number} 
-    hl = if $b_status == 'open' then glob.clrs.green else glob.clrs.red
+    hl = if $bug.status == 'open' then glob.clrs.green else glob.clrs.red
     cb = glob.clrs.bright
     ch = glob.clrs.yellow
     cr = glob.clrs.reset
-    print "%#{hl}#{$b_uid}#{glob.clrs.reset} [#{ch}#{$b_status}#{cr}] [#{ch+cb}#{$b_type}#{cr}] #{$b_title}"
+    out.push "%#{hl}#{$bug.uid}#{glob.clrs.reset} [#{ch}#{$bug.status}#{cr}] [#{ch+cb}#{$bug.type}#{cr}] #{$bug.title}"
+  
   if args.return
     if found.length == 1
       return found[0]
@@ -788,8 +791,8 @@ cmd.delete = (args) ->
       hook "delete", $bug.file
 
     if ! args.force
+      print "About to delete this bug..."
       get_confirmation ->
-        print "About to delete this bug..."
         do_delete()
       , "Phew, that was close!"    
     else
@@ -865,7 +868,7 @@ cmd.server = ->
       out_html()
 
   .listen port
-  console.log "Server running at http://127.0.0.1:#{port}/"
+  print "Serving `#{opts.path}` at http://127.0.0.1:#{port}/"
 
 # parse opts.args and return command object
 # should validate required options, but not their values
@@ -893,8 +896,13 @@ get_command = ->
           opts.args.id = id.replace /^%/, ''
     help: {}
     init: {}
-    search:
-      valid: ['type','state']
+    list:
+      valid: ['type','state','terms','all','return']
+      args: ->
+        if subcommand == 'search'
+          opts.args.all = true
+        if opts.args._.length
+          opts.args.terms = opts.args._.join ' '
     open:
       required: ['state'] # auto populated
       valid: ['type']
@@ -913,8 +921,8 @@ get_command = ->
       valid: ['editor']
       args: get_id
     append:
-      required: ['id']
-      valid: ['message']
+      required: ['id','message']
+      valid: ['type']
       args: get_id
     reopen:
       required: ['id']
@@ -924,8 +932,17 @@ get_command = ->
       args: get_id
     html: {}
     server: {}
+    destroy:
+      valid: ['force']
   
-  commands.list = commands.search
+  for command of commands
+    if ! commands[command].valid
+      commands[command].valid = []
+    commands[command].valid.push 'plain' # (no colours in output, and lean towards formatting suited to scripts)
+
+  # print commands
+
+  commands.search = commands.list
 
   # figure out what the command is, or assign `help`
   subcommand = opts.args._.shift() || 'help' # if no arguments
@@ -1062,7 +1079,6 @@ glob.clrs = {
   reset:"\u001b[m"
 
 }
-
 
 # get hooks and add them to the glogal hook object
 hooks = {}
