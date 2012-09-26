@@ -574,7 +574,13 @@ cmd.html = (args) ->
           <li>Author: #{$b.author}</li>
           <li>Type: #{$b.type}</li>
         </ul>
-        <p>#{$b.body.join "\r\n"}</p>
+        <p>#{$b.body.join "<br>\r\n<br>\r\n"}</p>
+        <hr>
+        <h4>Actions</h4>
+        <ul>
+          <li><a href='./?command=close #{$b.uid}'>Close</a></li>
+          <li><a href='./?command=delete #{$b.uid} -f'>Delete</a></li>
+        </ul>
       </div>
     """
   out += """
@@ -591,6 +597,12 @@ cmd.html = (args) ->
           <li>Type: #{$b.type}</li>
         </ul>
         <p>#{$b.body.join "\r\n"}</p>
+        <hr>
+        <h4>Actions</h4>
+        <ul>
+          <li><a href='./?command=reopen #{$b.uid}'>Re-open</a></li>
+          <li><a href='./?command=delete #{$b.uid} -f'>Delete</a></li>
+        </ul>
       </div>
     """
   out += """
@@ -800,20 +812,27 @@ cmd.delete = (args) ->
 
 # Inititalise a new .klog directory.
 cmd.init = ->
-  if ! fs.existsSync opts.path+opts.store
-    fs.mkdirSync opts.path+opts.store
+  if ! fs.existsSync opts.store
+    fs.mkdirSync opts.store
+    opts.path = process.cwd()+'/'
     print "#{glob.clrs.gunmetal}Now you have klogs on#{glob.clrs.reset}#{glob.clrs.red}!#{glob.clrs.reset}"
     cmd.setup()
   else
     print "There is already a .klog/ directory present here"
     exit 1
 
+cmd.destroy = (args) ->
+  if args.force
+    exec "rm -Rf #{opts.path+opts.store}"
+  else
+    print "This will destroy all issues. You must force this with `-f`."
+
 cmd.setup = ->
   if opts.user && opts.email
     settings = """
     {
-      "user":"#{opts.path+opts.user || 'John Doe'}",
-      "email":"#{opts.path+opts.email || 'john@thedoughfactory.com'}"
+      "user":"#{opts.user || 'John Doe'}",
+      "email":"#{opts.email || 'john@thedoughfactory.com'}"
     }
     """
     fs.writeFileSync "#{opts.path+opts.store}.gitignore","local"
@@ -835,16 +854,15 @@ cmd.server = ->
   command = (data) ->
     # POST = JSON.parse POST
     # opts.args._.push data.command.split ' '
-    args = data.command.trim().split ' '
+    if data.command
+      args = data.command.trim().split ' '
     print args
     while process.argv.length > 2
       process.argv.pop()
     _.each args, (v) ->
       process.argv.push v
-
+    opts.date = getDate()
     main()
-
-
 
   http.createServer (req, res) ->
     out_html = ->
@@ -864,7 +882,8 @@ cmd.server = ->
         out_html()
     else if req.method == 'GET'
       url_parts = url.parse req.url, true
-      print url_parts.query
+      # print url_parts.query
+      command url_parts.query
       out_html()
 
   .listen port
