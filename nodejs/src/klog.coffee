@@ -43,6 +43,7 @@ parseArgs = ->
     d:'debug'
     x:'exit'
     f:'force'
+    p:'plain' # no colours in output, and lean towards formatting suited to scripts
 
   args = process.argv
   o = {_:[],$0:[]}
@@ -943,6 +944,11 @@ main = ->
   opts.command = get_command()
 
   opts.command.name = opts.command.name.replace /^(open|closed|list)$/, 'search'
+
+  # override colours if `plain` is chosen (probably should implement colours as plugin)
+  if opts.command.args.plain
+    for clr of glob.clrs
+      glob.clrs[clr] = ""
 
   get_required opts.command.needs, ->
     # process.stdout.write "#{glob.clrs.red+glob.clrs.bright}Command: "
