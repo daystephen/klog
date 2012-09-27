@@ -1,7 +1,7 @@
 UID: 66e9
 Type: feature
 Title: use gitub style tags
-Added: 2012-09-12_16-50-13.198813
+Added: 2012-09-12_16-50-13.198
 Status: open
 
 it is a more extensible system to be able to attach an indefinate number of tags to a bug indicating it's status, and type etc... there is no reason not to be able to customize the tags at will, maybe with a confirmation if a new tag type is being created.
