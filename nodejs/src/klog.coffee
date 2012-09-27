@@ -243,10 +243,12 @@ usage = ->
 
       add                 - Add a new bug.
       append              - Append text to an existing bug.
+                            Set type with -t, and use `.` as message for no message
       close               - Change an open bug to closed.
       closed              - List all currently closed bugs.
       edit                - Allow a bug to be edited.
       delete              - Allow a bug to be deleted.
+      destroy             - Destroys the whole klog storage folder (including all issue data!)
       init                - Initialise the system.
       list|search         - Display existing bugs.
       open                - List all currently open bugs.
@@ -268,7 +270,7 @@ hook = (action, file) ->
   if hooks[action]
     hooks[action].run file
 
-# Change the statues of an existing bug.  Valid statuses are
+# Change the statues of an existing bug. Valid statuses are
 # "open" and "closed".
 changeBugState = ($value, $state) ->
 
