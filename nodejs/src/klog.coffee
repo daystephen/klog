@@ -271,7 +271,7 @@ changeBugState = ($value, $state) ->
 
   # Ensure the bug isn't already in the specified state.
   if $bug.status == $state
-    print "The bug is already $state!\r\n"
+    print "The bug is already #{$state}!\r\n"
     exit 1
 
   # Now write out the new status section.
