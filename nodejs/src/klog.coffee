@@ -102,6 +102,9 @@ getDate = ->
   c = new Date()
   return c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate()-5)+"_"+c.toLocaleTimeString().replace(/\D/g,'-')+"."+pad(c.getMilliseconds(),3)
 
+asDate = (datestring) ->
+  new Date datestring.replace(/_/,'T').replace(/T(.+)-(.+)-/,"T$1:$2:")
+
 # Generate a system UID.  This should be created with the username and
 # time included, such that collisions when running upon multiple systems
 # are unlikely.
@@ -124,14 +127,17 @@ getBugs = ->
       buffer = fs.readFileSync "#{opts.path+opts.store}#{file}"
       lines = buffer.toString().split /[\r\n]+/
       # print content
+      $modified = null
       $body = []
       for line in lines
         if m = line.match /^Title: (.*)/
           $title = m[1]
         else if m = line.match /^Type: (.*)/
           $type = m[1]
-        else if m = line.match /^(Added|Modified):(.*)/
-          # ignored
+        else if m = line.match /^Added: (.*)/
+          $added = m[1]
+        else if m = line.match /^Modified: (.*)/
+          $modified = m[1]
         else if m = line.match /^Author: (.*)/
           $author = m[1]
         else if m = line.match /^UID: (.*)/
@@ -140,6 +146,8 @@ getBugs = ->
           $status = m[1]
         else
           $body.push "\r\n"+line
+      if ! $modified
+        $modified = $added
       $results.push
         file: file
         body: $body
@@ -148,6 +156,8 @@ getBugs = ->
         status: $status
         type: $type
         title: $title
+        added: $added
+        modified: $modified
         author: $author || 'unspecified'
 
   return $results
@@ -180,6 +190,7 @@ getBugByUIDORNumber = ($arg) ->
     return: true
     terms: $arg
     state: 'open'
+    all: false
   if bug
     hl = if bug.status == 'open' then glob.clrs.green else glob.clrs.red
     cb = glob.clrs.bright
@@ -281,6 +292,11 @@ changeBugState = ($value, $state) ->
   """
 
   fs.appendFileSync opts.path+opts.store+$bug.file, content
+
+  add = asDate $bug.added
+  mod = asDate opts.date
+  print "("+Math.round(( (mod - add) / 1000 / 60 / 60 )*100)/100 + " hours after issue was added)"
+  # print $bug
 
   # If there is a hook, run it.
   hook $state, $bug.file
