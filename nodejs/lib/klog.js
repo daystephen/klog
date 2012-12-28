@@ -34,15 +34,14 @@ LICENSE:
       m: 'message',
       e: 'editor',
       t: 'type',
-      p: 'priority',
-      txt: 'plain'
+      p: 'priority'
     };
     switches = {
       a: 'all',
       d: 'debug',
-      x: 'exit',
       f: 'force',
-      r: 'return'
+      r: 'return',
+      x: 'plain'
     };
     args = process.argv;
     o = {
@@ -453,11 +452,12 @@ LICENSE:
   };
 
   cmd.search = function(args) {
-    var $b_body, $bug, $bugs, $match, $state, $term, $terms, $type, cb, ch, cr, found, hl, out, pool, pr, _i, _j, _len, _len1, _ref;
+    var $b_body, $bug, $bugs, $match, $priority, $state, $term, $terms, $type, cb, ch, cr, found, hl, out, pool, pr, _i, _j, _len, _len1, _ref;
     $terms = args.terms;
     $bugs = getBugs();
     $state = args.state || 'all';
     $type = args.type || "all";
+    $priority = args.priority || "all";
     found = [];
     out = [];
     for (_i = 0, _len = $bugs.length; _i < _len; _i++) {
@@ -466,6 +466,12 @@ LICENSE:
         continue;
       }
       if ($type !== "all" && $type.toLowerCase() !== $bug.type.toLowerCase()) {
+        continue;
+      }
+      if (($priority + '').match(/\./)) {
+        $priority = 0 - $priority * 10;
+      }
+      if ($priority !== "all" && $priority > $bug.priority) {
         continue;
       }
       $match = 1;
@@ -693,7 +699,7 @@ LICENSE:
       help: {},
       init: {},
       list: {
-        valid: ['type', 'state', 'terms', 'all', 'return'],
+        valid: ['type', 'state', 'terms', 'all', 'return', 'priority'],
         args: function() {
           if (subcommand === 'search') {
             opts.args.all = true;

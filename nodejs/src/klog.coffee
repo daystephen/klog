@@ -41,15 +41,16 @@ parseArgs = ->
     e:'editor'
     t:'type'
     p:'priority'
-    txt:'plain' # no colours in output, and lean towards formatting suited to scripts
+    # l:'label'
 
   # simple toggles, don't consume next argument
   switches =
     a:'all'
     d:'debug'
-    x:'exit'
+    # x:'exit'
     f:'force'
     r:'return'
+    x:'plain' # no colours in output, and lean towards formatting suited to scripts
 
   args = process.argv
   o = {_:[],$0:[]}
@@ -647,6 +648,9 @@ cmd.search = (args) ->
   # The type of the bugs the user is interested in.
   $type = args.type || "all"
 
+  # The priority of the bugs the user is interested in.
+  $priority = args.priority || "all"
+
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
   found = []
@@ -662,6 +666,13 @@ cmd.search = (args) ->
     # If the user is being specific about type then
     # skip ones that don't match
     if $type != "all" and $type.toLowerCase() != $bug.type.toLowerCase()
+      continue
+
+    # If the user is being specific about priority then
+    # skip ones that don't match
+    if ($priority+'').match /\./
+      $priority = 0-$priority*10
+    if $priority != "all" and $priority > $bug.priority
       continue
 
     # If there are search terms then search the title.
@@ -930,7 +941,7 @@ get_command = ->
     help: {}
     init: {}
     list:
-      valid: ['type','state','terms','all','return']
+      valid: ['type','state','terms','all','return','priority']
       args: ->
         if subcommand == 'search'
           opts.args.all = true
@@ -1044,7 +1055,7 @@ main = ->
       print opts.args
       
     if opts.args.exit
-      exit 0    
+      exit 0
 
     # Ensure we received an argument.
 
