@@ -34,7 +34,8 @@ LICENSE:
       m: 'message',
       e: 'editor',
       t: 'type',
-      p: 'priority'
+      p: 'priority',
+      l: 'label'
     };
     switches = {
       a: 'all',
@@ -373,7 +374,8 @@ LICENSE:
     $uid = randomUID();
     $title = args.title;
     $type = args.type || 'bug';
-    $priority = args.priority.replace(/\./, '-' || 0);
+    $priority = args.priority || '0';
+    $priority = $priority.replace(/\./, '-');
     opts.args.file = "" + opts.date + "." + $uid + ".log";
     opts.args.template = "UID: " + $uid + "\nType: " + $type + "\nPriority: " + $priority + "\nTitle: " + $title + "\nAdded: " + opts.date + "\nAuthor: " + opts.user + "\n\r\n";
     if (args.message) {
@@ -452,12 +454,21 @@ LICENSE:
   };
 
   cmd.search = function(args) {
-    var $b_body, $bug, $bugs, $match, $priority, $state, $term, $terms, $type, cb, ch, cr, found, hl, out, pool, pr, _i, _j, _len, _len1, _ref;
+    var $b_body, $bug, $bugs, $match, $priority, $state, $term, $terms, $type, cb, ch, cr, direction, found, hl, m, out, pool, pr, _i, _j, _len, _len1, _ref;
     $terms = args.terms;
     $bugs = getBugs();
     $state = args.state || 'all';
     $type = args.type || "all";
     $priority = args.priority || "all";
+    if ($priority === true) {
+      $priority = "all";
+    }
+    if (m = $priority.match(/(.+)([+-])$/)) {
+      $priority = m[1];
+      direction = m[2];
+    } else {
+      direction = null;
+    }
     found = [];
     out = [];
     for (_i = 0, _len = $bugs.length; _i < _len; _i++) {
@@ -471,8 +482,16 @@ LICENSE:
       if (($priority + '').match(/\./)) {
         $priority = 0 - $priority * 10;
       }
-      if ($priority !== "all" && $priority > $bug.priority) {
-        continue;
+      $bug.priority = parseInt($bug.priority);
+      if ($priority !== "all") {
+        $priority = parseInt($priority);
+        if (direction === '+' && $priority > $bug.priority) {
+          continue;
+        } else if (direction === null && $priority !== $bug.priority) {
+          continue;
+        } else if (direction === '-' && $priority < $bug.priority) {
+          continue;
+        }
       }
       $match = 1;
       $b_body = $bug.body.join('').replace(/(\\.|[^\w\s])/g, '');
@@ -679,7 +698,7 @@ LICENSE:
     commands = {
       add: {
         required: ['title', 'message'],
-        valid: ['type', 'priority'],
+        valid: ['type', 'priority', 'label'],
         args: function() {
           if (opts.args._.length) {
             return opts.args.title = opts.args._.join(' ');
@@ -711,14 +730,14 @@ LICENSE:
       },
       open: {
         required: ['state'],
-        valid: ['type'],
+        valid: ['type', 'priority'],
         args: function() {
           return opts.args.state = 'open';
         }
       },
       closed: {
         required: ['state'],
-        valid: ['type'],
+        valid: ['type', 'priority'],
         args: function() {
           return opts.args.state = 'closed';
         }

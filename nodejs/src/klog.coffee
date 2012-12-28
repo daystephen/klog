@@ -41,7 +41,7 @@ parseArgs = ->
     e:'editor'
     t:'type'
     p:'priority'
-    # l:'label'
+    l:'label'
 
   # simple toggles, don't consume next argument
   switches =
@@ -400,7 +400,8 @@ cmd.add = (args) ->
   $uid = randomUID()
   $title = args.title
   $type = args.type || 'bug'
-  $priority = args.priority.replace /\./, '-' || 0
+  $priority = args.priority || '0'
+  $priority = $priority.replace /\./, '-'
 
   opts.args.file = "#{opts.date}.#{$uid}.log";
 
@@ -651,6 +652,14 @@ cmd.search = (args) ->
   # The priority of the bugs the user is interested in.
   $priority = args.priority || "all"
 
+  # catch unset priority, and reset to all
+  if $priority == true then $priority = "all"
+  
+  if m = $priority.match /(.+)([+-])$/
+    $priority = m[1]
+    direction = m[2]
+  else direction = null
+  
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
   found = []
@@ -672,8 +681,18 @@ cmd.search = (args) ->
     # skip ones that don't match
     if ($priority+'').match /\./
       $priority = 0-$priority*10
-    if $priority != "all" and $priority > $bug.priority
-      continue
+
+    # print [$priority, direction, parseInt($bug.priority)]
+
+    $bug.priority = parseInt $bug.priority
+    if $priority != "all"
+      $priority = parseInt $priority
+      if direction == '+' and $priority > $bug.priority
+        continue
+      else if direction == null and $priority != $bug.priority
+        continue
+      else if direction == '-' and $priority < $bug.priority
+        continue
 
     # If there are search terms then search the title.
     # All terms must match.
@@ -928,7 +947,7 @@ get_command = ->
   commands =
     add:
       required: ['title','message']
-      valid: ['type','priority']
+      valid: ['type','priority','label']
       args: ->
         if opts.args._.length
           opts.args.title = opts.args._.join ' '
@@ -949,12 +968,12 @@ get_command = ->
           opts.args.terms = opts.args._.join ' '
     open:
       required: ['state'] # auto populated
-      valid: ['type']
+      valid: ['type','priority']
       args: ->
         opts.args.state = 'open'
     closed:
       required: ['state'] # auto populated
-      valid: ['type']
+      valid: ['type','priority']
       args: ->
         opts.args.state = 'closed'
     view:
