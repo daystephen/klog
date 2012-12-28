@@ -21,11 +21,14 @@ LICENSE:
 fs = require 'fs'
 exec = require("child_process").exec
 
-# MD5 Library
+# Underscore Library
 _ = require('../lib/underscore-min.js')
 
 # MD5 Library
 md5 = require('../lib/md5.js').MD5.hex_md5
+
+# Editor Library
+editor = require('../lib/editor.js')
 
 ## Functions
 
@@ -38,7 +41,7 @@ parseArgs = ->
     e:'editor'
     t:'type'
 
-  # simple toggels, don't consume next argument
+  # simple toggles, don't consume next argument
   switches =
     a:'all'
     d:'debug'
@@ -71,7 +74,7 @@ parseArgs = ->
         na = false
         o[switches[m[1]]] = m[3] || true
       else
-        console.log 'Unknown flag: '+m[1]
+        print 'Unknown flag: '+m[1]
         exit 1
     else if ++i > 0 # ignore first two args which are node and app
       if na == 'message'
@@ -218,7 +221,8 @@ exit = (code) ->
 editFile = (file) ->
   # Open the editor
   $editor = if opts.args.editor then opts.args.editor else if  process.env.EDITOR then process.env.EDITOR else if opts.win then "notepad" else "vim"
-  exec "#{$editor} #{file}"
+  editor file, {}
+  # exec "#{$editor} #{file}"
 
 # Remove the "# klog: " prefix from the given file.
 remove_comments = ($file) ->
@@ -302,33 +306,6 @@ changeBugState = ($value, $state) ->
 
   # If there is a hook, run it.
   hook $state, $bug.file
-
-get_title = (callback)->
-  stdin = process.openStdin()
-  process.stdout.write "Title: "
-  stdin.addListener "data", (d) ->
-    opts.args.title = d.toString().substring(0, d.length-1)
-    process.stdin.destroy()
-    callback()
-
-get_message = (callback)->
-  stdin = process.openStdin()
-  process.stdout.write "Message: "
-  stdin.addListener "data", (d) ->
-    opts.args.message = d.toString().substring(0, d.length-1)
-    process.stdin.destroy()
-    callback()
-
-write_file = ->
-  fs.writeFileSync opts.args.file, opts.args.template + opts.args.message+ "\r\n"
-
-get_items = ->
-  if ! opts.args.title
-    get_title get_items
-  else if ! opts.args.message
-    get_message get_items
-  else
-    print "got them all"
 
 get_user_details = (callback) ->
   if opts.user && opts.email
@@ -481,12 +458,12 @@ cmd.append = (args) ->
 
     # If we were given a message add it, otherwise spawn the editor.
     # redundant when the message argument is required
-    if args.message
+    if args.message || args.type
       $out = "\r\n\r\nModified: #{opts.date}\r\n"
       if args.type
         $out += "Type: #{args.type}\r\n"
       if args.message != '.'
-        $out += "#{args.message}"
+        $out += "#{args.message||''}"
       fs.appendFileSync opts.path+opts.store+$bug.file, $out
       return
     else

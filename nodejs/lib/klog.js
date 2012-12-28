@@ -15,7 +15,7 @@ LICENSE:
 
 
 (function() {
-  var buffer, changeBugState, cmd, editFile, exec, exit, folder, fs, getBugByUIDORNumber, getBugs, getDate, get_command, get_confirmation, get_items, get_message, get_required, get_title, get_user_details, glob, hook, hooks, main, md5, opts, pad, parseArgs, path, print, randomUID, remove_comments, sep, settings, tpath, usage, write_file, _, _i, _len;
+  var asDate, buffer, changeBugState, cmd, editFile, editor, exec, exit, folder, fs, getBugByUIDORNumber, getBugs, getDate, get_command, get_confirmation, get_required, get_user_details, glob, hook, hooks, main, md5, opts, pad, parseArgs, path, print, randomUID, remove_comments, sep, settings, tpath, usage, _, _i, _len;
 
   fs = require('fs');
 
@@ -24,6 +24,8 @@ LICENSE:
   _ = require('../lib/underscore-min.js');
 
   md5 = require('../lib/md5.js').MD5.hex_md5;
+
+  editor = require('../lib/editor.js');
 
   parseArgs = function() {
     var arg, args, i, k, m, na, o, options, switches, v, validOptions, _i, _len, _ref;
@@ -34,9 +36,12 @@ LICENSE:
       t: 'type'
     };
     switches = {
+      a: 'all',
       d: 'debug',
       x: 'exit',
-      f: 'force'
+      f: 'force',
+      p: 'plain',
+      r: 'return'
     };
     args = process.argv;
     o = {
@@ -66,7 +71,7 @@ LICENSE:
           na = false;
           o[switches[m[1]]] = m[3] || true;
         } else {
-          console.log('Unknown flag: ' + m[1]);
+          print('Unknown flag: ' + m[1]);
           exit(1);
         }
       } else if (++i > 0) {
@@ -100,6 +105,10 @@ LICENSE:
     return c.getFullYear() + "-" + pad(c.getMonth() + 1) + "-" + pad(c.getDate() - 5) + "_" + c.toLocaleTimeString().replace(/\D/g, '-') + "." + pad(c.getMilliseconds(), 3);
   };
 
+  asDate = function(datestring) {
+    return new Date(datestring.replace(/_/, 'T').replace(/T(.+)-(.+)-/, "T$1:$2:"));
+  };
+
   randomUID = function() {
     var $uid;
     $uid = opts.date + "." + opts.email;
@@ -109,7 +118,7 @@ LICENSE:
   };
 
   getBugs = function() {
-    var $author, $body, $number, $results, $status, $title, $type, $uid, buffer, file, files, line, lines, m, _i, _j, _len, _len1;
+    var $added, $author, $body, $modified, $number, $results, $status, $title, $type, $uid, buffer, file, files, line, lines, m, _i, _j, _len, _len1;
     files = fs.readdirSync("" + (opts.path + opts.store));
     files.sort();
     $results = [];
@@ -120,6 +129,7 @@ LICENSE:
         $status = 'open';
         buffer = fs.readFileSync("" + (opts.path + opts.store) + file);
         lines = buffer.toString().split(/[\r\n]+/);
+        $modified = null;
         $body = [];
         for (_j = 0, _len1 = lines.length; _j < _len1; _j++) {
           line = lines[_j];
@@ -127,8 +137,10 @@ LICENSE:
             $title = m[1];
           } else if (m = line.match(/^Type: (.*)/)) {
             $type = m[1];
-          } else if (m = line.match(/^(Added|Modified):(.*)/)) {
-
+          } else if (m = line.match(/^Added: (.*)/)) {
+            $added = m[1];
+          } else if (m = line.match(/^Modified: (.*)/)) {
+            $modified = m[1];
           } else if (m = line.match(/^Author: (.*)/)) {
             $author = m[1];
           } else if (m = line.match(/^UID: (.*)/)) {
@@ -136,8 +148,11 @@ LICENSE:
           } else if (m = line.match(/^Status: (.*)/i)) {
             $status = m[1];
           } else {
-            $body.push(line);
+            $body.push("\r\n" + line);
           }
+        }
+        if (!$modified) {
+          $modified = $added;
         }
         $results.push({
           file: file,
@@ -147,6 +162,8 @@ LICENSE:
           status: $status,
           type: $type,
           title: $title,
+          added: $added,
+          modified: $modified,
           author: $author || 'unspecified'
         });
       }
@@ -159,7 +176,7 @@ LICENSE:
   };
 
   getBugByUIDORNumber = function($arg) {
-    var $bug, $bugs, $possible, m, _i, _len;
+    var $bug, $bugs, $possible, bug, cb, ch, cr, hl, m, _i, _len;
     $bugs = getBugs();
     for (_i = 0, _len = $bugs.length; _i < _len; _i++) {
       $possible = $bugs[_i];
@@ -177,7 +194,22 @@ LICENSE:
         return $bug;
       }
     }
-    print("Bug not found: " + $arg + "\r\n");
+    print("Last resort, trying to search (open issues) for: " + glob.clrs.yellow + $arg + glob.clrs.reset);
+    bug = cmd.search({
+      "return": true,
+      terms: $arg,
+      state: 'open',
+      all: false
+    });
+    if (bug) {
+      hl = bug.status === 'open' ? glob.clrs.green : glob.clrs.red;
+      cb = glob.clrs.bright;
+      ch = glob.clrs.yellow;
+      cr = glob.clrs.reset;
+      print("Found: %" + hl + bug.uid + glob.clrs.reset + " [" + ch + bug.status + cr + "] [" + (ch + cb) + bug.type + cr + "] " + bug.title);
+      return bug;
+    }
+    print("Bug not found!!");
     return exit(1);
   };
 
@@ -190,7 +222,7 @@ LICENSE:
   editFile = function(file) {
     var $editor;
     $editor = opts.args.editor ? opts.args.editor : process.env.EDITOR ? process.env.EDITOR : opts.win ? "notepad" : "vim";
-    return exec("" + $editor + " " + file);
+    return editor(file, {});
   };
 
   remove_comments = function($file) {
@@ -207,7 +239,7 @@ LICENSE:
   };
 
   usage = function() {
-    print('\nklog [options] sub-command [args]\n\n  Available sub-commands:\n\n    add                 - Add a new bug.\n    append              - Append text to an existing bug.\n    close               - Change an open bug to closed.\n    closed              - List all currently closed bugs.\n    edit                - Allow a bug to be edited.\n    delete              - Allow a bug to be deleted.\n    init                - Initialise the system.\n    list|search         - Display existing bugs.\n    open                - List all currently open bugs.\n    reopen              - Change a closed bug to open.\n    view                - Show all details about a specific bug.\n    server              - HTTP server displays bugs, and accepts commands\n\n  Options:\n    -f, --force         - no confirmation when deleting\n    -t, --type          - issue type (default:bug) i.e. feature/enhance/task\n    -m, --message       - Use the given message rather than spawning an editor.\n    -s, --state         - Restrict matches when searching (open/closed).\n');
+    print('\nklog [options] sub-command [args]\n\n  Available sub-commands:\n\n    add                 - Add a new bug.\n    append              - Append text to an existing bug.\n                          Set type with -t, and use `.` as message for no message\n    close               - Change an open bug to closed.\n    closed              - List all currently closed bugs.\n    edit                - Allow a bug to be edited.\n    delete              - Allow a bug to be deleted.\n    destroy             - Destroys the whole klog storage folder (including all issue data!)\n    init                - Initialise the system.\n    list|search         - Display existing bugs.\n    open                - List all currently open bugs.\n    reopen              - Change a closed bug to open.\n    view                - Show all details about a specific bug.\n    server              - HTTP server displays bugs, and accepts commands\n\n  Options:\n    -f, --force         - no confirmation when deleting\n    -t, --type          - issue type (default:bug) i.e. feature/enhance/task\n    -m, --message       - Use the given message rather than spawning an editor.\n    -s, --state         - Restrict matches when searching (open/closed).\n');
     return exit(0);
   };
 
@@ -218,55 +250,22 @@ LICENSE:
   };
 
   changeBugState = function($value, $state) {
-    var $bug, content;
+    var $bug, add, content, mod;
     if (!$state.match(/^(open|closed)$/i)) {
       print("Invalid status " + $state);
       exit(1);
     }
     $bug = getBugByUIDORNumber($value);
     if ($bug.status === $state) {
-      print("The bug is already $state!\r\n");
+      print("The bug is already " + $state + "!\r\n");
       exit(1);
     }
-    content = "\r\n\r\n\nModified: " + opts.date + "\nStatus: " + $state + "\r\n";
+    content = "\r\n\nModified: " + opts.date + "\nStatus: " + $state;
     fs.appendFileSync(opts.path + opts.store + $bug.file, content);
+    add = asDate($bug.added);
+    mod = asDate(opts.date);
+    print("(" + Math.round(((mod - add) / 1000 / 60 / 60) * 100) / 100 + " hours after issue was added)");
     return hook($state, $bug.file);
-  };
-
-  get_title = function(callback) {
-    var stdin;
-    stdin = process.openStdin();
-    process.stdout.write("Title: ");
-    return stdin.addListener("data", function(d) {
-      opts.args.title = d.toString().substring(0, d.length - 1);
-      process.stdin.destroy();
-      return callback();
-    });
-  };
-
-  get_message = function(callback) {
-    var stdin;
-    stdin = process.openStdin();
-    process.stdout.write("Message: ");
-    return print(stdin.addListener("data", function(d) {
-      opts.args.message = d.toString().substring(0, d.length - 1);
-      process.stdin.destroy();
-      return callback();
-    }));
-  };
-
-  write_file = function() {
-    return fs.writeFileSync(opts.args.file, opts.args.template + opts.args.message + "\r\n");
-  };
-
-  get_items = function() {
-    if (!opts.args.title) {
-      return get_title(get_items);
-    } else if (!opts.args.message) {
-      return get_message(get_items);
-    } else {
-      return print("got them all");
-    }
   };
 
   get_user_details = function(callback) {
@@ -365,13 +364,15 @@ LICENSE:
     opts.args.file = "" + opts.date + "." + $uid + ".log";
     opts.args.template = "UID: " + $uid + "\nType: " + $type + "\nTitle: " + $title + "\nAdded: " + opts.date + "\nAuthor: " + opts.user + "\n\r\n";
     if (args.message) {
-      fs.writeFileSync(opts.path + opts.store + opts.args.file, opts.args.template + args.message + "\r\n");
+      fs.writeFileSync(opts.path + opts.store + opts.args.file, opts.args.template + args.message);
+      print("added issue %" + glob.clrs.yellow + $uid + glob.clrs.reset);
       hook("add", opts.args.file);
     } else {
       opts.args.template += "# klog:\n# klog:  Enter your bug report here; it is better to write too much than\n# klog: too little.\n# klog:\n# klog:  Lines beginning with \"# klog:\" will be ignored, and removed,\n# klog: this file is saved.\n# klog:\r\n";
       fs.writeFileSync(opts.args.file, opts.args.template);
       editFile(opts.args.file);
       remove_comments(opts.args.file);
+      print("added issue %" + glob.clrs.yellow + $uid + glob.clrs.reset);
       return hook("add", opts.args.file);
     }
   };
@@ -383,8 +384,14 @@ LICENSE:
       exit(1);
     }
     $bug = getBugByUIDORNumber(args.id);
-    if (args.message) {
-      $out = "\r\nModified: " + opts.date + "\r\n" + opts.args.message + "\r\n";
+    if (args.message || args.type) {
+      $out = "\r\n\r\nModified: " + opts.date + "\r\n";
+      if (args.type) {
+        $out += "Type: " + args.type + "\r\n";
+      }
+      if (args.message !== '.') {
+        $out += "" + (args.message || '');
+      }
       fs.appendFileSync(opts.path + opts.store + $bug.file, $out);
       return;
     } else {
@@ -413,12 +420,12 @@ LICENSE:
     out = "<!DOCTYPE HTML>\n<html lang=\"en-US\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>klog : issue tracking and time management</title>\n  <style type='text/css'>\n  body{\n    font-family: century gothic;\n  }\n  .bug {\n    background-color: silver;\n    border-radius: 0.5em 0.5em 0.5em 0.5em;\n    margin: 0.5em 0;\n    padding: 0.3em 1em;\n  }\n  #command-intro {\n    padding-left: 0.5em;\n    width: 37px;\n  }\n  input {\n    background-color: black;\n    border: medium none;\n    color: silver;\n    float: left;\n    height: 2em;\n    margin: 0;\n    padding: 0;\n  }\n  h1, h2, h3, h4, h5, h6, p, ul{\n    clear: both;\n  }\n  #command{\n    width: 40em\n  }\n  #execute{\n    border-left: 1px solid red\n  }\n  </style>\n</head>\n<body onload=\"document.getElementById('command').focus()\">\n  \n  <h1>Klog : issue tracking and time management</h1>\n\n  <ul>\n    <li><a href='#open' class='button'>" + $open_count + " : open bugs</a></li>\n    <li><a href='#closed' class='button'>" + $closed_count + " : closed bugs</a></li>\n  </ul>\n\n  <form action='.' method='POST'>\n    <input type=\"text\" value=\"$ klog\" readonly=\"readonly\" name=\"intro\" id=\"command-intro\">\n    <input type=\"text\" name=\"command\" id=\"command\">\n    <input type=\"submit\" id=\"execute\" value=\"execute!\">\n  </form>\n\n  <a name='open'></a>\n  <h2 id=\"open\">Open bugs</h2>";
     for (_j = 0, _len1 = $open.length; _j < _len1; _j++) {
       $b = $open[_j];
-      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul>\n    <li>UID: " + $b.uid + "</li>\n    <li>Added: " + $b.added + "</li>\n    <li>Author: " + $b.author + "</li>\n    <li>Type: " + $b.type + "</li>\n  </ul>\n  <p>" + ($b.body.join("\r\n")) + "</p>\n</div>";
+      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul>\n    <li>UID: " + $b.uid + "</li>\n    <li>Added: " + $b.added + "</li>\n    <li>Author: " + $b.author + "</li>\n    <li>Type: " + $b.type + "</li>\n  </ul>\n  <p>" + ($b.body.join("<br>\r\n<br>\r\n")) + "</p>\n  <hr>\n  <h4>Actions</h4>\n  <ul>\n    <li><a href='./?command=close " + $b.uid + "'>Close</a></li>\n    <li><a href='./?command=delete " + $b.uid + " -f'>Delete</a></li>\n  </ul>\n</div>";
     }
     out += "<h2 id=\"closed\">Closed bugs</h2>";
     for (_k = 0, _len2 = $closed.length; _k < _len2; _k++) {
       $b = $closed[_k];
-      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul>\n    <li>UID: " + $b.uid + "</li>\n    <li>Added: " + $b.added + "</li>\n    <li>Author: " + $b.author + "</li>\n    <li>Type: " + $b.type + "</li>\n  </ul>\n  <p>" + ($b.body.join("\r\n")) + "</p>\n</div>";
+      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul>\n    <li>UID: " + $b.uid + "</li>\n    <li>Added: " + $b.added + "</li>\n    <li>Author: " + $b.author + "</li>\n    <li>Type: " + $b.type + "</li>\n  </ul>\n  <p>" + ($b.body.join("\r\n")) + "</p>\n  <hr>\n  <h4>Actions</h4>\n  <ul>\n    <li><a href='./?command=reopen " + $b.uid + "'>Re-open</a></li>\n    <li><a href='./?command=delete " + $b.uid + " -f'>Delete</a></li>\n  </ul>\n</div>";
     }
     out += "  <div id=\"foot\">\n    Generated by <a href=\"http://billymoon.github.com/klog/\">klog</a>.\n  </div>\n</body>\n</html>";
     if (args["return"]) {
@@ -429,32 +436,29 @@ LICENSE:
   };
 
   cmd.search = function(args) {
-    var $b_file, $b_number, $b_status, $b_title, $b_type, $b_uid, $bug, $bugs, $match, $state, $term, $terms, $type, cb, ch, cr, hl, _i, _j, _len, _len1, _ref, _results;
+    var $b_body, $bug, $bugs, $match, $state, $term, $terms, $type, cb, ch, cr, found, hl, out, pool, _i, _j, _len, _len1, _ref;
     $terms = args.terms;
     $bugs = getBugs();
     $state = args.state ? args.state : 'all';
     $type = args.type || "all";
-    _results = [];
+    found = [];
+    out = [];
     for (_i = 0, _len = $bugs.length; _i < _len; _i++) {
       $bug = $bugs[_i];
-      $b_title = $bug.title;
-      $b_type = $bug.type;
-      $b_status = $bug.status;
-      $b_uid = $bug.uid;
-      $b_file = $bug.file;
-      $b_number = $bug.number;
-      if ($state !== "all" && $state.toLowerCase() !== $b_status.toLowerCase()) {
+      if ($state !== "all" && $state.toLowerCase() !== $bug.status.toLowerCase()) {
         continue;
       }
-      if ($type !== "all" && $type.toLowerCase() !== $b_type.toLowerCase()) {
+      if ($type !== "all" && $type.toLowerCase() !== $bug.type.toLowerCase()) {
         continue;
       }
       $match = 1;
+      $b_body = $bug.body.join('').replace(/(\\.|[^\w\s])/g, '');
+      pool = args.all ? $bug.title + $bug.type + $b_body : $bug.title;
       if (args.terms) {
-        _ref = $terms.split(/[ \t]/);
+        _ref = $terms.split(/[ \t]+/);
         for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
           $term = _ref[_j];
-          if (!$b_title.match(new RegExp($term, 'i'))) {
+          if (!pool.match(new RegExp($term, 'i'))) {
             $match = 0;
           }
         }
@@ -462,13 +466,21 @@ LICENSE:
       if (!$match) {
         continue;
       }
-      hl = $b_status === 'open' ? glob.clrs.green : glob.clrs.red;
+      found.push($bug);
+      hl = $bug.status === 'open' ? glob.clrs.green : glob.clrs.red;
       cb = glob.clrs.bright;
       ch = glob.clrs.yellow;
       cr = glob.clrs.reset;
-      _results.push(print("%" + hl + $b_uid + glob.clrs.reset + " [" + ch + $b_status + cr + "] [" + (ch + cb) + $b_type + cr + "] " + $b_title));
+      out.push("%" + hl + $bug.uid + glob.clrs.reset + " [" + ch + $bug.status + cr + "] [" + (ch + cb) + $bug.type + cr + "] " + $bug.title);
     }
-    return _results;
+    if (args["return"]) {
+      if (found.length === 1) {
+        return found[0];
+      }
+      return print(out.join("\r\n"));
+    } else {
+      return print(out.join("\r\n"));
+    }
   };
 
   cmd.view = function(args) {
@@ -536,8 +548,8 @@ LICENSE:
       return hook("delete", $bug.file);
     };
     if (!args.force) {
+      print("About to delete this bug...");
       return get_confirmation(function() {
-        print("About to delete this bug...");
         return do_delete();
       }, "Phew, that was close!");
     } else {
@@ -546,8 +558,9 @@ LICENSE:
   };
 
   cmd.init = function() {
-    if (!fs.existsSync(opts.path + opts.store)) {
-      fs.mkdirSync(opts.path + opts.store);
+    if (!fs.existsSync(opts.store)) {
+      fs.mkdirSync(opts.store);
+      opts.path = process.cwd() + '/';
       print("" + glob.clrs.gunmetal + "Now you have klogs on" + glob.clrs.reset + glob.clrs.red + "!" + glob.clrs.reset);
       return cmd.setup();
     } else {
@@ -556,10 +569,18 @@ LICENSE:
     }
   };
 
+  cmd.destroy = function(args) {
+    if (args.force) {
+      return exec("rm -Rf " + (opts.path + opts.store));
+    } else {
+      return print("This will destroy all issues. You must force this with `-f`.");
+    }
+  };
+
   cmd.setup = function() {
     var settings;
     if (opts.user && opts.email) {
-      settings = "{\n  \"user\":\"" + (opts.path + opts.user || 'John Doe') + "\",\n  \"email\":\"" + (opts.path + opts.email || 'john@thedoughfactory.com') + "\"\n}";
+      settings = "{\n  \"user\":\"" + (opts.user || 'John Doe') + "\",\n  \"email\":\"" + (opts.email || 'john@thedoughfactory.com') + "\"\n}";
       fs.writeFileSync("" + (opts.path + opts.store) + ".gitignore", "local");
       fs.mkdirSync("" + (opts.path + opts.store) + "local");
       fs.writeFileSync("" + (opts.path + opts.store) + "local/settings.json", settings);
@@ -578,7 +599,9 @@ LICENSE:
     url = require('url');
     command = function(data) {
       var args;
-      args = data.command.trim().split(' ');
+      if (data.command) {
+        args = data.command.trim().split(' ');
+      }
       print(args);
       while (process.argv.length > 2) {
         process.argv.pop();
@@ -586,6 +609,7 @@ LICENSE:
       _.each(args, function(v) {
         return process.argv.push(v);
       });
+      opts.date = getDate();
       return main();
     };
     http.createServer(function(req, res) {
@@ -610,11 +634,11 @@ LICENSE:
         });
       } else if (req.method === 'GET') {
         url_parts = url.parse(req.url, true);
-        print(url_parts.query);
+        command(url_parts.query);
         return out_html();
       }
     }).listen(port);
-    return console.log("Server running at http://127.0.0.1:" + port + "/");
+    return print("Serving `" + opts.path + "` at http://127.0.0.1:" + port + "/");
   };
 
   get_command = function() {
@@ -650,8 +674,16 @@ LICENSE:
       },
       help: {},
       init: {},
-      search: {
-        valid: ['type', 'state']
+      list: {
+        valid: ['type', 'state', 'terms', 'all', 'return'],
+        args: function() {
+          if (subcommand === 'search') {
+            opts.args.all = true;
+          }
+          if (opts.args._.length) {
+            return opts.args.terms = opts.args._.join(' ');
+          }
+        }
       },
       open: {
         required: ['state'],
@@ -677,8 +709,8 @@ LICENSE:
         args: get_id
       },
       append: {
-        required: ['id'],
-        valid: ['message'],
+        required: ['id', 'message'],
+        valid: ['type'],
         args: get_id
       },
       reopen: {
@@ -690,9 +722,18 @@ LICENSE:
         args: get_id
       },
       html: {},
-      server: {}
+      server: {},
+      destroy: {
+        valid: ['force']
+      }
     };
-    commands.list = commands.search;
+    for (command in commands) {
+      if (!commands[command].valid) {
+        commands[command].valid = [];
+      }
+      commands[command].valid.push('plain');
+    }
+    commands.search = commands.list;
     subcommand = opts.args._.shift() || 'help';
     command = commands[subcommand] || (subcommand = 'help');
     out.name = subcommand;
@@ -747,9 +788,15 @@ LICENSE:
   };
 
   main = function() {
+    var clr;
     opts.args = parseArgs();
     opts.command = get_command();
     opts.command.name = opts.command.name.replace(/^(open|closed|list)$/, 'search');
+    if (opts.command.args.plain) {
+      for (clr in glob.clrs) {
+        glob.clrs[clr] = "";
+      }
+    }
     return get_required(opts.command.needs, function() {
       opts.args._.unshift(opts.command.name);
       if (opts.args.debug) {
