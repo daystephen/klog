@@ -98,7 +98,12 @@ parseArgs = ->
 ## Utility functions.
 
 # Pad a string (with 0 or specified)
-pad=`function(e,t,n){n=n||"0",t=t||2;while((""+e).length<t)e=n+e;return e}`
+pad = (e,t,n)->
+  n = n || "0"
+  t = t || 2
+  while (""+e).length<t
+    e=n+e
+  e
 
 # return date in format yyyy-mm-dd_hh-ii-ss
 getDate = ->
