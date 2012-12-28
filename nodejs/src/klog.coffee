@@ -110,7 +110,7 @@ pad = (e,t,n)->
 # return date in format yyyy-mm-dd_hh-ii-ss
 getDate = ->
   c = new Date()
-  return c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate()-5)+"_"+c.toLocaleTimeString().replace(/\D/g,'-')+"."+pad(c.getMilliseconds(),3)
+  return c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate())+"_"+c.toLocaleTimeString().replace(/\D/g,'-')+"."+pad(c.getMilliseconds(),3)
 
 asDate = (datestring) ->
   new Date datestring.replace(/_/,'T').replace(/T(.+)-(.+)-/,"T$1:$2:")
@@ -528,18 +528,161 @@ cmd.html = (args) ->
     <meta charset="UTF-8">
     <title>klog : issue tracking and time management</title>
     <style type='text/css'>
+      /*
+      This is the<a href="#" class="button default inline">Default</a> action!
+      <a href="#" class="button blue">Blue</a>
+      */
+
+      .button {
+        margin: 0 15px 15px 0;
+        font-family: 'Lucida Grande', 'Helvetica Neue', sans-serif;
+        font-size: 13px;
+        display: inline-block;
+        background-color: #f5f5f5;
+        background-image: -webkit-linear-gradient(top,#f5f5f5,#f1f1f1);
+        background-image: -moz-linear-gradient(top,#f5f5f5,#f1f1f1);
+        background-image: -ms-linear-gradient(top,#f5f5f5,#f1f1f1);
+        background-image: -o-linear-gradient(top,#f5f5f5,#f1f1f1);
+        background-image: linear-gradient(top,#f5f5f5,#f1f1f1);
+        color: #444;
+        
+        border: 1px solid #dcdcdc;
+        -webkit-border-radius: 2px;
+        -moz-border-radius: 2px;
+        border-radius: 2px;
+        
+        cursor: default;
+        font-size: 11px;
+        font-weight: bold;
+        text-align: center;
+        height: 27px;
+        line-height: 27px;
+        min-width: 54px;
+        padding: 0 8px;
+        text-decoration: none;
+      }
+
+      .button.inline {
+        margin: 0 .2em 0 .5em;
+      }
+
+      .button:hover {
+        background-color: #F8F8F8;
+        background-image: -webkit-linear-gradient(top,#f8f8f8,#f1f1f1);
+        background-image: -moz-linear-gradient(top,#f8f8f8,#f1f1f1);
+        background-image: -ms-linear-gradient(top,#f8f8f8,#f1f1f1);
+        background-image: -o-linear-gradient(top,#f8f8f8,#f1f1f1);
+        background-image: linear-gradient(top,#f8f8f8,#f1f1f1);
+        
+        border: 1px solid #C6C6C6;
+        color: #333;
+        
+        -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.1);
+        -moz-box-shadow: 0px 1px 1px rgba(0,0,0,.1);
+        box-shadow: 0px 1px 1px rgba(0,0,0,.1);
+        text-decoration: none;
+
+        cursor: pointer;
+      }
+
+      /* blue */
+
+      .button.blue {
+        background-color: #4D90FE;
+        background-image: -webkit-linear-gradient(top,#4d90fe,#4787ed);
+        background-image: -moz-linear-gradient(top,#4d90fe,#4787ed);
+        background-image: -ms-linear-gradient(top,#4d90fe,#4787ed);
+        background-image: -o-linear-gradient(top,#4d90fe,#4787ed);
+        background-image: linear-gradient(top,#4d90fe,#4787ed);
+
+        border: 1px solid #3079ED;
+        color: white;
+      }
+
+      .button.blue:hover {
+        border: 1px solid #2F5BB7;
+        
+        background-color: #357AE8;
+        background-image: -webkit-linear-gradient(top,#4d90fe,#357ae8);
+        background-image: -moz-linear-gradient(top,#4d90fe,#357ae8);
+        background-image: -ms-linear-gradient(top,#4d90fe,#357ae8);
+        background-image: -o-linear-gradient(top,#4d90fe,#357ae8);
+        background-image: linear-gradient(top,#4d90fe,#357ae8);
+        
+        -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.1);
+        -moz-box-shadow: 0 1px 1px rgba(0,0,0,.1);
+        box-shadow: 0 1px 1px rgba(0,0,0,.1);
+      }
+
+      /* red */
+
+      .button.red {
+        background-color: #D14836;
+        background-image: -webkit-linear-gradient(top,#dd4b39,#d14836);
+        background-image: -moz-linear-gradient(top,#dd4b39,#d14836);
+        background-image: -ms-linear-gradient(top,#dd4b39,#d14836);
+        background-image: -o-linear-gradient(top,#dd4b39,#d14836);
+        background-image: linear-gradient(top,#dd4b39,#d14836);
+        
+        border: 1px solid transparent;
+        color: white;
+        text-shadow: 0 1px rgba(0, 0, 0, 0.1);
+      }
+
+      .button.red:hover {
+        background-color: #C53727;
+        background-image: -webkit-linear-gradient(top,#dd4b39,#c53727);
+        background-image: -moz-linear-gradient(top,#dd4b39,#c53727);
+        background-image: -ms-linear-gradient(top,#dd4b39,#c53727);
+        background-image: -o-linear-gradient(top,#dd4b39,#c53727);
+        background-image: linear-gradient(top,#dd4b39,#c53727); 
+      }
+
+      /* green */
+
+      .button.green {
+        background-color: #3D9400;
+        background-image: -webkit-linear-gradient(top,#3d9400,#398a00);
+        background-image: -moz-linear-gradient(top,#3d9400,#398a00);
+        background-image: -ms-linear-gradient(top,#3d9400,#398a00);
+        background-image: -o-linear-gradient(top,#3d9400,#398a00);
+        background-image: linear-gradient(top,#3d9400,#398a00);
+        
+        border: 1px solid #29691D;
+        color: white;
+        text-shadow: 0 1px rgba(0, 0, 0, 0.1);
+      }
+
+      .button.green:hover {
+        background-color: #368200;
+        background-image: -webkit-linear-gradient(top,#3d9400,#368200);
+        background-image: -moz-linear-gradient(top,#3d9400,#368200);
+        background-image: -ms-linear-gradient(top,#3d9400,#368200);
+        background-image: -o-linear-gradient(top,#3d9400,#368200);
+        background-image: linear-gradient(top,#3d9400,#368200);
+        
+        border: 1px solid #2D6200;
+        text-shadow: 0 1px rgba(0, 0, 0, 0.3);
+      }
+    </style>
+    <style type='text/css'>
     body{
       font-family: century gothic;
     }
     .bug {
-      background-color: silver;
+      background-color: #F7F7F7;
+      border: 5px solid #666666;
       border-radius: 0.5em 0.5em 0.5em 0.5em;
       margin: 0.5em 0;
       padding: 0.3em 1em;
     }
+    .bug h3{
+      font-size: 2em;
+      margin: 0.2em 0;
+    }
     #command-intro {
       padding-left: 0.5em;
-      width: 37px;
+      width: 3.4em;
     }
     input {
       background-color: black;
@@ -549,32 +692,68 @@ cmd.html = (args) ->
       height: 2em;
       margin: 0;
       padding: 0;
+      font-size: 1em;
     }
     h1, h2, h3, h4, h5, h6, p, ul{
       clear: both;
     }
     #command{
-      width: 40em
+      width: 40em;
     }
     #execute{
-      border-left: 1px solid red
+      border-left: 1px solid red;
+      padding: 0 0.3em;
+    }
+    ul.nav{
+      padding-top: 1em;
+    }
+    ul.nav li{
+      float: left;
+      list-style-type: none;
+      margin: 0 1em 0 -1em;
+      padding: 0;
+    }
+    ul.actions li{
+      float: left;
+      list-style-type: none;
+    }
+    ul.actions{
+      padding: 0;
+    }
+    ul {
+      margin: 0 0 1em;
+      padding: 0 1em;
+    }
+    ul.attributes {
+      color: #666666;
+      list-style-type: circle;
+    }
+    .clear{
+      clear: both;
+    }
+    form{
+      border: 5px solid #666666;
+      border-radius: 0.3em 0.3em 0.3em 0.3em;
+      height: 2em;
+      width: 49.05em;
     }
     </style>
   </head>
   <body onload="document.getElementById('command').focus()">
     
-    <h1>Klog : issue tracking and time management</h1>
-
-    <ul>
-      <li><a href='#open' class='button'>#{$open_count} : open bugs</a></li>
-      <li><a href='#closed' class='button'>#{$closed_count} : closed bugs</a></li>
-    </ul>
+    <h1>Klog : distributed issue tracking</h1>
 
     <form action='.' method='POST'>
       <input type="text" value="$ klog" readonly="readonly" name="intro" id="command-intro">
       <input type="text" name="command" id="command">
       <input type="submit" id="execute" value="execute!">
     </form>
+
+    <ul class='nav'>
+      <li><a href='#open' class='button'>#{$open_count} : open bugs</a></li>
+      <li><a href='#closed' class='button'>#{$closed_count} : closed bugs</a></li>
+    </ul>
+    <hr class='clear' />
 
     <a name='open'></a>
     <h2 id="open">Open bugs</h2>
@@ -583,19 +762,19 @@ cmd.html = (args) ->
     out += """
       <div class='bug'>
         <h3>#{$b.title}</h3>
-        <ul>
-          <li>UID: #{$b.uid}</li>
-          <li>Added: #{$b.added}</li>
-          <li>Author: #{$b.author}</li>
-          <li>Type: #{$b.type}</li>
+        <ul class='attributes'>
+          <li><strong>UID</strong>: #{$b.uid}</li>
+          <li><strong>Added</strong>: #{$b.added}</li>
+          <li><strong>Author</strong>: #{$b.author}</li>
+          <li><strong>Type</strong>: #{$b.type}</li>
         </ul>
         <p>#{$b.body.join "<br>\r\n<br>\r\n"}</p>
         <hr>
-        <h4>Actions</h4>
-        <ul>
-          <li><a href='./?command=close #{$b.uid}'>Close</a></li>
-          <li><a href='./?command=delete #{$b.uid} -f'>Delete</a></li>
+        <ul class='actions'>
+          <li><a href='./?command=close #{$b.uid}' class='button blue'>Close</a></li>
+          <li><a href='./?command=delete #{$b.uid} -f' class='button red' onclick='return confirm("Do you really want to delete this item?")'>Delete</a></li>
         </ul>
+        <br class='clear' />
       </div>
     """
   out += """
@@ -605,19 +784,20 @@ cmd.html = (args) ->
     out += """
       <div class='bug'>
         <h3>#{$b.title}</h3>
-        <ul>
-          <li>UID: #{$b.uid}</li>
-          <li>Added: #{$b.added}</li>
-          <li>Author: #{$b.author}</li>
-          <li>Type: #{$b.type}</li>
+        <ul class='attributes'>
+          <li><strong>UID</strong>: #{$b.uid}</li>
+          <li><strong>Added</strong>: #{$b.added}</li>
+          <li><strong>Author</strong>: #{$b.author}</li>
+          <li><strong>Type</strong>: #{$b.type}</li>
+          <li><strong>Priority</strong>: #{$b.priority}</li>
         </ul>
-        <p>#{$b.body.join "\r\n"}</p>
+        <p>#{$b.body.join "<br>\r\n<br>\r\n"}</p>
         <hr>
-        <h4>Actions</h4>
-        <ul>
-          <li><a href='./?command=reopen #{$b.uid}'>Re-open</a></li>
-          <li><a href='./?command=delete #{$b.uid} -f'>Delete</a></li>
+        <ul class='actions'>
+          <li><a href='./?command=reopen #{$b.uid}' class='button green'>Re-open</a></li>
+          <li><a href='./?command=delete #{$b.uid} -f' class='button red' onclick='return confirm("Do you really want to delete this item?")'>Delete</a></li>
         </ul>
+        <br class='clear' />
       </div>
     """
   out += """
