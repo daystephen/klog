@@ -40,6 +40,8 @@ parseArgs = ->
     m:'message'
     e:'editor'
     t:'type'
+    p:'priority'
+    txt:'plain' # no colours in output, and lean towards formatting suited to scripts
 
   # simple toggles, don't consume next argument
   switches =
@@ -47,7 +49,6 @@ parseArgs = ->
     d:'debug'
     x:'exit'
     f:'force'
-    p:'plain' # no colours in output, and lean towards formatting suited to scripts
     r:'return'
 
   args = process.argv
@@ -135,6 +136,7 @@ getBugs = ->
       buffer = fs.readFileSync "#{opts.path+opts.store}#{file}"
       lines = buffer.toString().split /[\r\n]+/
       # print content
+      $priority = 0
       $modified = null
       $body = []
       for line in lines
@@ -142,6 +144,8 @@ getBugs = ->
           $title = m[1]
         else if m = line.match /^Type: (.*)/
           $type = m[1]
+        else if m = line.match /^Priority: (.*)/
+          $priority = m[1]
         else if m = line.match /^Added: (.*)/
           $added = m[1]
         else if m = line.match /^Modified: (.*)/
@@ -163,6 +167,7 @@ getBugs = ->
         uid: $uid
         status: $status
         type: $type
+        priority: $priority
         title: $title
         added: $added
         modified: $modified
@@ -270,6 +275,8 @@ usage = ->
       -t, --type          - issue type (default:bug) i.e. feature/enhance/task
       -m, --message       - Use the given message rather than spawning an editor.
       -s, --state         - Restrict matches when searching (open/closed).
+      -a, --all           - Search everywhere (type, and message), not just the title 
+      -p, --priority      - Set the priority (`.` is replaced with `-`, so `.3` will result in `-3`)
 
   '''
      # -e, --editor        - Specify which editor to use.
@@ -386,10 +393,13 @@ cmd = {}
 # Add a new bug.
 cmd.add = (args) ->
 
+  print args
+
   # Make a "random" filename, with the same UID as the content.
   $uid = randomUID()
   $title = args.title
   $type = args.type || 'bug'
+  $priority = args.priority.replace /\./, '-' || 0
 
   opts.args.file = "#{opts.date}.#{$uid}.log";
 
@@ -397,6 +407,7 @@ cmd.add = (args) ->
   opts.args.template = """
   UID: #{$uid}
   Type: #{$type}
+  Priority: #{$priority}
   Title: #{$title}
   Added: #{opts.date}
   Author: #{opts.user}
@@ -467,6 +478,8 @@ cmd.append = (args) ->
       $out = "\r\n\r\nModified: #{opts.date}\r\n"
       if args.type
         $out += "Type: #{args.type}\r\n"
+      if args.priority
+        $out += "Priority: #{args.priority.replace /[\.]/, '-'}\r\n"
       if args.message != '.'
         $out += "#{args.message||''}"
       fs.appendFileSync opts.path+opts.store+$bug.file, $out
@@ -629,7 +642,7 @@ cmd.search = (args) ->
   $bugs = getBugs()
 
   # The state of the bugs the user is interested in.
-  $state = if args.state then args.state else 'all'
+  $state = args.state || 'all'
 
   # The type of the bugs the user is interested in.
   $type = args.type || "all"
@@ -674,7 +687,8 @@ cmd.search = (args) ->
     cb = glob.clrs.bright
     ch = glob.clrs.yellow
     cr = glob.clrs.reset
-    out.push "%#{hl}#{$bug.uid}#{glob.clrs.reset} [#{ch}#{$bug.status}#{cr}] [#{ch+cb}#{$bug.type}#{cr}] #{$bug.title}"
+    pr = if $bug.priority > 1 then glob.clrs.bright+glob.clrs.yellow else if $bug.priority > 0 then glob.clrs.yellow else if $bug.priority < -1 then glob.clrs.gunmetal else glob.clrs.silver
+    out.push "%#{hl}#{$bug.uid}#{glob.clrs.reset} [#{pr}#{pad ($bug.priority+'').replace(/^([1-9])/,'+$1'), 2, ' '}#{cr}] [#{ch}#{$bug.status}#{cr}] [#{ch+cb}#{$bug.type}#{cr}] #{$bug.title}"
   
   if args.return
     if found.length == 1
@@ -873,7 +887,7 @@ cmd.server = ->
       res.end cmd.html opts.command.args
 
     if req.method == 'POST'
-      body=''
+      body = ''
       req.on 'data', (data) ->
         body += data
       req.on 'end', ->
@@ -903,7 +917,7 @@ get_command = ->
   commands =
     add:
       required: ['title','message']
-      valid: ['type']
+      valid: ['type','priority']
       args: ->
         if opts.args._.length
           opts.args.title = opts.args._.join ' '
@@ -941,7 +955,7 @@ get_command = ->
       args: get_id
     append:
       required: ['id','message']
-      valid: ['type']
+      valid: ['type','priority']
       args: get_id
     reopen:
       required: ['id']

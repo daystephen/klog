@@ -33,14 +33,15 @@ LICENSE:
       s: 'state',
       m: 'message',
       e: 'editor',
-      t: 'type'
+      t: 'type',
+      p: 'priority',
+      txt: 'plain'
     };
     switches = {
       a: 'all',
       d: 'debug',
       x: 'exit',
       f: 'force',
-      p: 'plain',
       r: 'return'
     };
     args = process.argv;
@@ -97,7 +98,14 @@ LICENSE:
     return o;
   };
 
-  pad = function(e,t,n){n=n||"0",t=t||2;while((""+e).length<t)e=n+e;return e};
+  pad = function(e, t, n) {
+    n = n || "0";
+    t = t || 2;
+    while (("" + e).length < t) {
+      e = n + e;
+    }
+    return e;
+  };
 
   getDate = function() {
     var c;
@@ -118,7 +126,7 @@ LICENSE:
   };
 
   getBugs = function() {
-    var $added, $author, $body, $modified, $number, $results, $status, $title, $type, $uid, buffer, file, files, line, lines, m, _i, _j, _len, _len1;
+    var $added, $author, $body, $modified, $number, $priority, $results, $status, $title, $type, $uid, buffer, file, files, line, lines, m, _i, _j, _len, _len1;
     files = fs.readdirSync("" + (opts.path + opts.store));
     files.sort();
     $results = [];
@@ -129,6 +137,7 @@ LICENSE:
         $status = 'open';
         buffer = fs.readFileSync("" + (opts.path + opts.store) + file);
         lines = buffer.toString().split(/[\r\n]+/);
+        $priority = 0;
         $modified = null;
         $body = [];
         for (_j = 0, _len1 = lines.length; _j < _len1; _j++) {
@@ -137,6 +146,8 @@ LICENSE:
             $title = m[1];
           } else if (m = line.match(/^Type: (.*)/)) {
             $type = m[1];
+          } else if (m = line.match(/^Priority: (.*)/)) {
+            $priority = m[1];
           } else if (m = line.match(/^Added: (.*)/)) {
             $added = m[1];
           } else if (m = line.match(/^Modified: (.*)/)) {
@@ -161,6 +172,7 @@ LICENSE:
           uid: $uid,
           status: $status,
           type: $type,
+          priority: $priority,
           title: $title,
           added: $added,
           modified: $modified,
@@ -239,7 +251,7 @@ LICENSE:
   };
 
   usage = function() {
-    print('\nklog [options] sub-command [args]\n\n  Available sub-commands:\n\n    add                 - Add a new bug.\n    append              - Append text to an existing bug.\n                          Set type with -t, and use `.` as message for no message\n    close               - Change an open bug to closed.\n    closed              - List all currently closed bugs.\n    edit                - Allow a bug to be edited.\n    delete              - Allow a bug to be deleted.\n    destroy             - Destroys the whole klog storage folder (including all issue data!)\n    init                - Initialise the system.\n    list|search         - Display existing bugs.\n    open                - List all currently open bugs.\n    reopen              - Change a closed bug to open.\n    view                - Show all details about a specific bug.\n    server              - HTTP server displays bugs, and accepts commands\n\n  Options:\n    -f, --force         - no confirmation when deleting\n    -t, --type          - issue type (default:bug) i.e. feature/enhance/task\n    -m, --message       - Use the given message rather than spawning an editor.\n    -s, --state         - Restrict matches when searching (open/closed).\n');
+    print('\nklog [options] sub-command [args]\n\n  Available sub-commands:\n\n    add                 - Add a new bug.\n    append              - Append text to an existing bug.\n                          Set type with -t, and use `.` as message for no message\n    close               - Change an open bug to closed.\n    closed              - List all currently closed bugs.\n    edit                - Allow a bug to be edited.\n    delete              - Allow a bug to be deleted.\n    destroy             - Destroys the whole klog storage folder (including all issue data!)\n    init                - Initialise the system.\n    list|search         - Display existing bugs.\n    open                - List all currently open bugs.\n    reopen              - Change a closed bug to open.\n    view                - Show all details about a specific bug.\n    server              - HTTP server displays bugs, and accepts commands\n\n  Options:\n    -f, --force         - no confirmation when deleting\n    -t, --type          - issue type (default:bug) i.e. feature/enhance/task\n    -m, --message       - Use the given message rather than spawning an editor.\n    -s, --state         - Restrict matches when searching (open/closed).\n    -a, --all           - Search everywhere (type, and message), not just the title \n    -p, --priority      - Set the priority (`.` is replaced with `-`, so `.3` will result in `-3`)\n');
     return exit(0);
   };
 
@@ -357,12 +369,14 @@ LICENSE:
   cmd = {};
 
   cmd.add = function(args) {
-    var $title, $type, $uid;
+    var $priority, $title, $type, $uid;
+    print(args);
     $uid = randomUID();
     $title = args.title;
     $type = args.type || 'bug';
+    $priority = args.priority.replace(/\./, '-' || 0);
     opts.args.file = "" + opts.date + "." + $uid + ".log";
-    opts.args.template = "UID: " + $uid + "\nType: " + $type + "\nTitle: " + $title + "\nAdded: " + opts.date + "\nAuthor: " + opts.user + "\n\r\n";
+    opts.args.template = "UID: " + $uid + "\nType: " + $type + "\nPriority: " + $priority + "\nTitle: " + $title + "\nAdded: " + opts.date + "\nAuthor: " + opts.user + "\n\r\n";
     if (args.message) {
       fs.writeFileSync(opts.path + opts.store + opts.args.file, opts.args.template + args.message);
       print("added issue %" + glob.clrs.yellow + $uid + glob.clrs.reset);
@@ -388,6 +402,9 @@ LICENSE:
       $out = "\r\n\r\nModified: " + opts.date + "\r\n";
       if (args.type) {
         $out += "Type: " + args.type + "\r\n";
+      }
+      if (args.priority) {
+        $out += "Priority: " + (args.priority.replace(/[\.]/, '-')) + "\r\n";
       }
       if (args.message !== '.') {
         $out += "" + (args.message || '');
@@ -436,10 +453,10 @@ LICENSE:
   };
 
   cmd.search = function(args) {
-    var $b_body, $bug, $bugs, $match, $state, $term, $terms, $type, cb, ch, cr, found, hl, out, pool, _i, _j, _len, _len1, _ref;
+    var $b_body, $bug, $bugs, $match, $state, $term, $terms, $type, cb, ch, cr, found, hl, out, pool, pr, _i, _j, _len, _len1, _ref;
     $terms = args.terms;
     $bugs = getBugs();
-    $state = args.state ? args.state : 'all';
+    $state = args.state || 'all';
     $type = args.type || "all";
     found = [];
     out = [];
@@ -471,7 +488,8 @@ LICENSE:
       cb = glob.clrs.bright;
       ch = glob.clrs.yellow;
       cr = glob.clrs.reset;
-      out.push("%" + hl + $bug.uid + glob.clrs.reset + " [" + ch + $bug.status + cr + "] [" + (ch + cb) + $bug.type + cr + "] " + $bug.title);
+      pr = $bug.priority > 1 ? glob.clrs.bright + glob.clrs.yellow : $bug.priority > 0 ? glob.clrs.yellow : $bug.priority < -1 ? glob.clrs.gunmetal : glob.clrs.silver;
+      out.push("%" + hl + $bug.uid + glob.clrs.reset + " [" + pr + (pad(($bug.priority + '').replace(/^([1-9])/, '+$1'), 2, ' ')) + cr + "] [" + ch + $bug.status + cr + "] [" + (ch + cb) + $bug.type + cr + "] " + $bug.title);
     }
     if (args["return"]) {
       if (found.length === 1) {
@@ -655,7 +673,7 @@ LICENSE:
     commands = {
       add: {
         required: ['title', 'message'],
-        valid: ['type'],
+        valid: ['type', 'priority'],
         args: function() {
           if (opts.args._.length) {
             return opts.args.title = opts.args._.join(' ');
@@ -710,7 +728,7 @@ LICENSE:
       },
       append: {
         required: ['id', 'message'],
-        valid: ['type'],
+        valid: ['type', 'priority'],
         args: get_id
       },
       reopen: {
