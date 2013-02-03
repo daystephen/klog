@@ -34,6 +34,48 @@ editor = require('../lib/editor.js')
 
 parseArgs = ->
 
+  ## alternative implementation idea based on creating a `command` class
+  #
+  # in_array = (needle, haystack)->
+  #   for e in haystack
+  #     if e == needle then return true
+  #   false
+
+  # cli = "show --type there -x 'this is' -c 'anything \" goes --here#$#$' --happen --thong -m this goes to the end -t happen"
+  # cli = "add -t feature -p 2 -m theis is the message%"
+  # rex = /-(m.+|-?(\S+))(\s+((['"]).+?\5|[^'"-]\S*))?/g
+
+  # commands =
+  #   show:
+  #     mandatory: ['m']
+  #     optional: ['x','c']
+
+  # class command
+  #   constructor: (cli)->
+  #     m = cli.match /^\S+/
+  #     @cmd = m[0]
+  #     @args = {}
+  #     for i in cli.match rex
+  #       m = i.match /--?(\S+)(\s+(['"]?)(.+)\3)?/
+  #       console.log m
+  #       cmd = m[1]
+  #       if m[4]
+  #         params = m[4]
+  #       else
+  #         params = null
+  #       @args[cmd] = params
+  #   validate: ->
+  #     err = null
+  #     if ! commands[@cmd]
+  #       err = "command: `#{@cmd}` does not exist"
+  #     else
+  #       for e in @args
+  #         if ! in_array e, commands.mandatory
+  #           console.log "bad:" + e
+  #         else
+  #           console.log "good: " + e
+  #     err
+
   # Command line options
   options = 
     s:'state'
@@ -127,6 +169,17 @@ randomUID = ->
 
 # Find and return an array of hashes, one for each existing bug.
 getBugs = ->
+  if ! opts.path
+    print """
+      This directory does not appear to have Klogs on!
+
+      Put them on with:
+
+        klog init
+
+      or try `klog help` for more info
+    """
+    exit()
   files = fs.readdirSync "#{opts.path+opts.store}"
   files.sort()
   $results = []
@@ -767,6 +820,7 @@ cmd.html = (args) ->
           <li><strong>Added</strong>: #{$b.added}</li>
           <li><strong>Author</strong>: #{$b.author}</li>
           <li><strong>Type</strong>: #{$b.type}</li>
+          <li><strong>Priority</strong>: #{$b.priority}</li>
         </ul>
         <p>#{$b.body.join "<br>\r\n<br>\r\n"}</p>
         <hr>
@@ -843,7 +897,6 @@ cmd.search = (args) ->
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
   found = []
-  out = []
   # For each bug
   for $bug in $bugs
 
@@ -890,22 +943,43 @@ cmd.search = (args) ->
 
     found.push $bug
 
+  if args.return && found.length == 1
+    return found[0]
+  else
+    output_cli found, 'priority'
+
+# output bugs list to command line, optionally with sorting
+output_cli = (bugs,sort)->
+
+  if sort == 'priority'
+    bugs.sort (a,b)-> b.priority - a.priority
+  else if sort == 'added'
+    bugs.sort (a,b)->
+      bb = parseInt b.added.replace /\D/g,''
+      aa = parseInt a.added.replace /\D/g,''
+      bb - aa
+  else if sort == 'modified'
+    bugs.sort (a,b)->
+      bb = parseInt b.modified.replace /\D/g,''
+      aa = parseInt a.modified.replace /\D/g,''
+      bb - aa
+
+  # console.log bugs
+
+  out = []
+  for bug in bugs
+
     # Otherwise show a summary of the bug.
     # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $bug.uid, "[".$bug.status."]", "[".$bug.type."]", $bug.title . "\r\n";
     # removed number: ##{$b_number} 
-    hl = if $bug.status == 'open' then glob.clrs.green else glob.clrs.red
+    hl = if bug.status == 'open' then glob.clrs.green else glob.clrs.red
     cb = glob.clrs.bright
     ch = glob.clrs.yellow
     cr = glob.clrs.reset
-    pr = if $bug.priority > 1 then glob.clrs.bright+glob.clrs.yellow else if $bug.priority > 0 then glob.clrs.yellow else if $bug.priority < -1 then glob.clrs.gunmetal else glob.clrs.silver
-    out.push "%#{hl}#{$bug.uid}#{glob.clrs.reset} [#{pr}#{pad ($bug.priority+'').replace(/^([1-9])/,'+$1'), 2, ' '}#{cr}] [#{ch}#{$bug.status}#{cr}] [#{ch+cb}#{$bug.type}#{cr}] #{$bug.title}"
+    pr = if bug.priority > 1 then glob.clrs.bright+glob.clrs.yellow else if bug.priority > 0 then glob.clrs.yellow else if bug.priority < -1 then glob.clrs.gunmetal else glob.clrs.silver  
+    out.push "%#{hl}#{bug.uid}#{glob.clrs.reset} [#{pr}#{pad (bug.priority+'').replace(/^([1-9])/,'+$1'), 2, ' '}#{cr}] [#{ch}#{bug.status}#{cr}] [#{ch+cb}#{bug.type}#{cr}] #{bug.title}"
   
-  if args.return
-    if found.length == 1
-      return found[0]
-    print out.join "\r\n"
-  else
-    print out.join "\r\n"
+  print out.join "\r\n"
 
 # View a specific bug.
 # This means:
@@ -1146,6 +1220,7 @@ get_command = ->
           opts.args.all = true
         if opts.args._.length
           opts.args.terms = opts.args._.join ' '
+          console.log opts.args.terms
     open:
       required: ['state'] # auto populated
       valid: ['type','priority']

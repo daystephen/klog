@@ -15,7 +15,7 @@ LICENSE:
 
 
 (function() {
-  var asDate, buffer, changeBugState, cmd, editFile, editor, exec, exit, folder, fs, getBugByUIDORNumber, getBugs, getDate, get_command, get_confirmation, get_required, get_user_details, glob, hook, hooks, main, md5, opts, pad, parseArgs, path, print, randomUID, remove_comments, sep, settings, tpath, usage, _, _i, _len;
+  var asDate, buffer, changeBugState, cmd, editFile, editor, exec, exit, folder, fs, getBugByUIDORNumber, getBugs, getDate, get_command, get_confirmation, get_required, get_user_details, glob, hook, hooks, main, md5, opts, output_cli, pad, parseArgs, path, print, randomUID, remove_comments, sep, settings, tpath, usage, _, _i, _len;
 
   fs = require('fs');
 
@@ -127,6 +127,10 @@ LICENSE:
 
   getBugs = function() {
     var $added, $author, $body, $modified, $number, $priority, $results, $status, $title, $type, $uid, buffer, file, files, line, lines, m, _i, _j, _len, _len1;
+    if (!opts.path) {
+      print("This directory does not appear to have Klogs on!\n\nPut them on with:\n\n  klog init\n\nor try `klog help` for more info");
+      exit();
+    }
     files = fs.readdirSync("" + (opts.path + opts.store));
     files.sort();
     $results = [];
@@ -438,7 +442,7 @@ LICENSE:
     out = "<!DOCTYPE HTML>\n<html lang=\"en-US\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>klog : issue tracking and time management</title>\n  <style type='text/css'>\n    /*\n    This is the<a href=\"#\" class=\"button default inline\">Default</a> action!\n    <a href=\"#\" class=\"button blue\">Blue</a>\n    */\n\n    .button {\n      margin: 0 15px 15px 0;\n      font-family: 'Lucida Grande', 'Helvetica Neue', sans-serif;\n      font-size: 13px;\n      display: inline-block;\n      background-color: #f5f5f5;\n      background-image: -webkit-linear-gradient(top,#f5f5f5,#f1f1f1);\n      background-image: -moz-linear-gradient(top,#f5f5f5,#f1f1f1);\n      background-image: -ms-linear-gradient(top,#f5f5f5,#f1f1f1);\n      background-image: -o-linear-gradient(top,#f5f5f5,#f1f1f1);\n      background-image: linear-gradient(top,#f5f5f5,#f1f1f1);\n      color: #444;\n      \n      border: 1px solid #dcdcdc;\n      -webkit-border-radius: 2px;\n      -moz-border-radius: 2px;\n      border-radius: 2px;\n      \n      cursor: default;\n      font-size: 11px;\n      font-weight: bold;\n      text-align: center;\n      height: 27px;\n      line-height: 27px;\n      min-width: 54px;\n      padding: 0 8px;\n      text-decoration: none;\n    }\n\n    .button.inline {\n      margin: 0 .2em 0 .5em;\n    }\n\n    .button:hover {\n      background-color: #F8F8F8;\n      background-image: -webkit-linear-gradient(top,#f8f8f8,#f1f1f1);\n      background-image: -moz-linear-gradient(top,#f8f8f8,#f1f1f1);\n      background-image: -ms-linear-gradient(top,#f8f8f8,#f1f1f1);\n      background-image: -o-linear-gradient(top,#f8f8f8,#f1f1f1);\n      background-image: linear-gradient(top,#f8f8f8,#f1f1f1);\n      \n      border: 1px solid #C6C6C6;\n      color: #333;\n      \n      -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.1);\n      -moz-box-shadow: 0px 1px 1px rgba(0,0,0,.1);\n      box-shadow: 0px 1px 1px rgba(0,0,0,.1);\n      text-decoration: none;\n\n      cursor: pointer;\n    }\n\n    /* blue */\n\n    .button.blue {\n      background-color: #4D90FE;\n      background-image: -webkit-linear-gradient(top,#4d90fe,#4787ed);\n      background-image: -moz-linear-gradient(top,#4d90fe,#4787ed);\n      background-image: -ms-linear-gradient(top,#4d90fe,#4787ed);\n      background-image: -o-linear-gradient(top,#4d90fe,#4787ed);\n      background-image: linear-gradient(top,#4d90fe,#4787ed);\n\n      border: 1px solid #3079ED;\n      color: white;\n    }\n\n    .button.blue:hover {\n      border: 1px solid #2F5BB7;\n      \n      background-color: #357AE8;\n      background-image: -webkit-linear-gradient(top,#4d90fe,#357ae8);\n      background-image: -moz-linear-gradient(top,#4d90fe,#357ae8);\n      background-image: -ms-linear-gradient(top,#4d90fe,#357ae8);\n      background-image: -o-linear-gradient(top,#4d90fe,#357ae8);\n      background-image: linear-gradient(top,#4d90fe,#357ae8);\n      \n      -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.1);\n      -moz-box-shadow: 0 1px 1px rgba(0,0,0,.1);\n      box-shadow: 0 1px 1px rgba(0,0,0,.1);\n    }\n\n    /* red */\n\n    .button.red {\n      background-color: #D14836;\n      background-image: -webkit-linear-gradient(top,#dd4b39,#d14836);\n      background-image: -moz-linear-gradient(top,#dd4b39,#d14836);\n      background-image: -ms-linear-gradient(top,#dd4b39,#d14836);\n      background-image: -o-linear-gradient(top,#dd4b39,#d14836);\n      background-image: linear-gradient(top,#dd4b39,#d14836);\n      \n      border: 1px solid transparent;\n      color: white;\n      text-shadow: 0 1px rgba(0, 0, 0, 0.1);\n    }\n\n    .button.red:hover {\n      background-color: #C53727;\n      background-image: -webkit-linear-gradient(top,#dd4b39,#c53727);\n      background-image: -moz-linear-gradient(top,#dd4b39,#c53727);\n      background-image: -ms-linear-gradient(top,#dd4b39,#c53727);\n      background-image: -o-linear-gradient(top,#dd4b39,#c53727);\n      background-image: linear-gradient(top,#dd4b39,#c53727); \n    }\n\n    /* green */\n\n    .button.green {\n      background-color: #3D9400;\n      background-image: -webkit-linear-gradient(top,#3d9400,#398a00);\n      background-image: -moz-linear-gradient(top,#3d9400,#398a00);\n      background-image: -ms-linear-gradient(top,#3d9400,#398a00);\n      background-image: -o-linear-gradient(top,#3d9400,#398a00);\n      background-image: linear-gradient(top,#3d9400,#398a00);\n      \n      border: 1px solid #29691D;\n      color: white;\n      text-shadow: 0 1px rgba(0, 0, 0, 0.1);\n    }\n\n    .button.green:hover {\n      background-color: #368200;\n      background-image: -webkit-linear-gradient(top,#3d9400,#368200);\n      background-image: -moz-linear-gradient(top,#3d9400,#368200);\n      background-image: -ms-linear-gradient(top,#3d9400,#368200);\n      background-image: -o-linear-gradient(top,#3d9400,#368200);\n      background-image: linear-gradient(top,#3d9400,#368200);\n      \n      border: 1px solid #2D6200;\n      text-shadow: 0 1px rgba(0, 0, 0, 0.3);\n    }\n  </style>\n  <style type='text/css'>\n  body{\n    font-family: century gothic;\n  }\n  .bug {\n    background-color: #F7F7F7;\n    border: 5px solid #666666;\n    border-radius: 0.5em 0.5em 0.5em 0.5em;\n    margin: 0.5em 0;\n    padding: 0.3em 1em;\n  }\n  .bug h3{\n    font-size: 2em;\n    margin: 0.2em 0;\n  }\n  #command-intro {\n    padding-left: 0.5em;\n    width: 3.4em;\n  }\n  input {\n    background-color: black;\n    border: medium none;\n    color: silver;\n    float: left;\n    height: 2em;\n    margin: 0;\n    padding: 0;\n    font-size: 1em;\n  }\n  h1, h2, h3, h4, h5, h6, p, ul{\n    clear: both;\n  }\n  #command{\n    width: 40em;\n  }\n  #execute{\n    border-left: 1px solid red;\n    padding: 0 0.3em;\n  }\n  ul.nav{\n    padding-top: 1em;\n  }\n  ul.nav li{\n    float: left;\n    list-style-type: none;\n    margin: 0 1em 0 -1em;\n    padding: 0;\n  }\n  ul.actions li{\n    float: left;\n    list-style-type: none;\n  }\n  ul.actions{\n    padding: 0;\n  }\n  ul {\n    margin: 0 0 1em;\n    padding: 0 1em;\n  }\n  ul.attributes {\n    color: #666666;\n    list-style-type: circle;\n  }\n  .clear{\n    clear: both;\n  }\n  form{\n    border: 5px solid #666666;\n    border-radius: 0.3em 0.3em 0.3em 0.3em;\n    height: 2em;\n    width: 49.05em;\n  }\n  </style>\n</head>\n<body onload=\"document.getElementById('command').focus()\">\n  \n  <h1>Klog : distributed issue tracking</h1>\n\n  <form action='.' method='POST'>\n    <input type=\"text\" value=\"$ klog\" readonly=\"readonly\" name=\"intro\" id=\"command-intro\">\n    <input type=\"text\" name=\"command\" id=\"command\">\n    <input type=\"submit\" id=\"execute\" value=\"execute!\">\n  </form>\n\n  <ul class='nav'>\n    <li><a href='#open' class='button'>" + $open_count + " : open bugs</a></li>\n    <li><a href='#closed' class='button'>" + $closed_count + " : closed bugs</a></li>\n  </ul>\n  <hr class='clear' />\n\n  <a name='open'></a>\n  <h2 id=\"open\">Open bugs</h2>";
     for (_j = 0, _len1 = $open.length; _j < _len1; _j++) {
       $b = $open[_j];
-      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul class='attributes'>\n    <li><strong>UID</strong>: " + $b.uid + "</li>\n    <li><strong>Added</strong>: " + $b.added + "</li>\n    <li><strong>Author</strong>: " + $b.author + "</li>\n    <li><strong>Type</strong>: " + $b.type + "</li>\n  </ul>\n  <p>" + ($b.body.join("<br>\r\n<br>\r\n")) + "</p>\n  <hr>\n  <ul class='actions'>\n    <li><a href='./?command=close " + $b.uid + "' class='button blue'>Close</a></li>\n    <li><a href='./?command=delete " + $b.uid + " -f' class='button red' onclick='return confirm(\"Do you really want to delete this item?\")'>Delete</a></li>\n  </ul>\n  <br class='clear' />\n</div>";
+      out += "<div class='bug'>\n  <h3>" + $b.title + "</h3>\n  <ul class='attributes'>\n    <li><strong>UID</strong>: " + $b.uid + "</li>\n    <li><strong>Added</strong>: " + $b.added + "</li>\n    <li><strong>Author</strong>: " + $b.author + "</li>\n    <li><strong>Type</strong>: " + $b.type + "</li>\n    <li><strong>Priority</strong>: " + $b.priority + "</li>\n  </ul>\n  <p>" + ($b.body.join("<br>\r\n<br>\r\n")) + "</p>\n  <hr>\n  <ul class='actions'>\n    <li><a href='./?command=close " + $b.uid + "' class='button blue'>Close</a></li>\n    <li><a href='./?command=delete " + $b.uid + " -f' class='button red' onclick='return confirm(\"Do you really want to delete this item?\")'>Delete</a></li>\n  </ul>\n  <br class='clear' />\n</div>";
     }
     out += "<h2 id=\"closed\">Closed bugs</h2>";
     for (_k = 0, _len2 = $closed.length; _k < _len2; _k++) {
@@ -454,7 +458,7 @@ LICENSE:
   };
 
   cmd.search = function(args) {
-    var $b_body, $bug, $bugs, $match, $priority, $state, $term, $terms, $type, cb, ch, cr, direction, found, hl, m, out, pool, pr, _i, _j, _len, _len1, _ref;
+    var $b_body, $bug, $bugs, $match, $priority, $state, $term, $terms, $type, direction, found, m, pool, _i, _j, _len, _len1, _ref;
     $terms = args.terms;
     $bugs = getBugs();
     $state = args.state || 'all';
@@ -470,7 +474,6 @@ LICENSE:
       direction = null;
     }
     found = [];
-    out = [];
     for (_i = 0, _len = $bugs.length; _i < _len; _i++) {
       $bug = $bugs[_i];
       if ($state !== "all" && $state.toLowerCase() !== $bug.status.toLowerCase()) {
@@ -509,21 +512,46 @@ LICENSE:
         continue;
       }
       found.push($bug);
-      hl = $bug.status === 'open' ? glob.clrs.green : glob.clrs.red;
+    }
+    if (args["return"] && found.length === 1) {
+      return found[0];
+    } else {
+      return output_cli(found, 'priority');
+    }
+  };
+
+  output_cli = function(bugs, sort) {
+    var bug, cb, ch, cr, hl, out, pr, _i, _len;
+    if (sort === 'priority') {
+      bugs.sort(function(a, b) {
+        return b.priority - a.priority;
+      });
+    } else if (sort === 'added') {
+      bugs.sort(function(a, b) {
+        var aa, bb;
+        bb = parseInt(b.added.replace(/\D/g, ''));
+        aa = parseInt(a.added.replace(/\D/g, ''));
+        return bb - aa;
+      });
+    } else if (sort === 'modified') {
+      bugs.sort(function(a, b) {
+        var aa, bb;
+        bb = parseInt(b.modified.replace(/\D/g, ''));
+        aa = parseInt(a.modified.replace(/\D/g, ''));
+        return bb - aa;
+      });
+    }
+    out = [];
+    for (_i = 0, _len = bugs.length; _i < _len; _i++) {
+      bug = bugs[_i];
+      hl = bug.status === 'open' ? glob.clrs.green : glob.clrs.red;
       cb = glob.clrs.bright;
       ch = glob.clrs.yellow;
       cr = glob.clrs.reset;
-      pr = $bug.priority > 1 ? glob.clrs.bright + glob.clrs.yellow : $bug.priority > 0 ? glob.clrs.yellow : $bug.priority < -1 ? glob.clrs.gunmetal : glob.clrs.silver;
-      out.push("%" + hl + $bug.uid + glob.clrs.reset + " [" + pr + (pad(($bug.priority + '').replace(/^([1-9])/, '+$1'), 2, ' ')) + cr + "] [" + ch + $bug.status + cr + "] [" + (ch + cb) + $bug.type + cr + "] " + $bug.title);
+      pr = bug.priority > 1 ? glob.clrs.bright + glob.clrs.yellow : bug.priority > 0 ? glob.clrs.yellow : bug.priority < -1 ? glob.clrs.gunmetal : glob.clrs.silver;
+      out.push("%" + hl + bug.uid + glob.clrs.reset + " [" + pr + (pad((bug.priority + '').replace(/^([1-9])/, '+$1'), 2, ' ')) + cr + "] [" + ch + bug.status + cr + "] [" + (ch + cb) + bug.type + cr + "] " + bug.title);
     }
-    if (args["return"]) {
-      if (found.length === 1) {
-        return found[0];
-      }
-      return print(out.join("\r\n"));
-    } else {
-      return print(out.join("\r\n"));
-    }
+    return print(out.join("\r\n"));
   };
 
   cmd.view = function(args) {
@@ -724,7 +752,8 @@ LICENSE:
             opts.args.all = true;
           }
           if (opts.args._.length) {
-            return opts.args.terms = opts.args._.join(' ');
+            opts.args.terms = opts.args._.join(' ');
+            return console.log(opts.args.terms);
           }
         }
       },
