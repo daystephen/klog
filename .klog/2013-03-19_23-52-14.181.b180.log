@@ -1,0 +1,8 @@
+UID: b180
+Type: bug
+Priority: 0
+Title: REPL
+Added: 2013-03-19_23-52-14.181
+Author: Billy Moon
+
+The REPL should work both from the command line, to save typing `klog` all the time, and also from within Sublime Editor, which will be extremely awesome!
