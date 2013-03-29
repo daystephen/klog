@@ -21,15 +21,60 @@ LICENSE:
 fs = require 'fs'
 exec = require("child_process").exec
 
-# MD5 Library
+# Underscore Library
 _ = require('../lib/underscore-min.js')
 
 # MD5 Library
 md5 = require('../lib/md5.js').MD5.hex_md5
 
+# Editor Library
+editor = require('../lib/editor.js')
+
 ## Functions
 
 parseArgs = ->
+
+  ## alternative implementation idea based on creating a `command` class
+  #
+  # in_array = (needle, haystack)->
+  #   for e in haystack
+  #     if e == needle then return true
+  #   false
+
+  # cli = "show --type there -x 'this is' -c 'anything \" goes --here#$#$' --happen --thong -m this goes to the end -t happen"
+  # cli = "add -t feature -p 2 -m theis is the message%"
+  # rex = /-(m.+|-?(\S+))(\s+((['"]).+?\5|[^'"-]\S*))?/g
+
+  # commands =
+  #   show:
+  #     mandatory: ['m']
+  #     optional: ['x','c']
+
+  # class command
+  #   constructor: (cli)->
+  #     m = cli.match /^\S+/
+  #     @cmd = m[0]
+  #     @args = {}
+  #     for i in cli.match rex
+  #       m = i.match /--?(\S+)(\s+(['"]?)(.+)\3)?/
+  #       console.log m
+  #       cmd = m[1]
+  #       if m[4]
+  #         params = m[4]
+  #       else
+  #         params = null
+  #       @args[cmd] = params
+  #   validate: ->
+  #     err = null
+  #     if ! commands[@cmd]
+  #       err = "command: `#{@cmd}` does not exist"
+  #     else
+  #       for e in @args
+  #         if ! in_array e, commands.mandatory
+  #           console.log "bad:" + e
+  #         else
+  #           console.log "good: " + e
+  #     err
 
   # Command line options
   options = 
@@ -37,12 +82,17 @@ parseArgs = ->
     m:'message'
     e:'editor'
     t:'type'
+    p:'priority'
+    l:'label'
 
-  # simple toggels, don't consume next argument
+  # simple toggles, don't consume next argument
   switches =
+    a:'all'
     d:'debug'
-    x:'exit'
+    # x:'exit'
     f:'force'
+    r:'return'
+    x:'plain' # no colours in output, and lean towards formatting suited to scripts
 
   args = process.argv
   o = {_:[],$0:[]}
@@ -68,7 +118,7 @@ parseArgs = ->
         na = false
         o[switches[m[1]]] = m[3] || true
       else
-        console.log 'Unknown flag: '+m[1]
+        print 'Unknown flag: '+m[1]
         exit 1
     else if ++i > 0 # ignore first two args which are node and app
       if na == 'message'
@@ -92,12 +142,20 @@ parseArgs = ->
 ## Utility functions.
 
 # Pad a string (with 0 or specified)
-pad=`function(e,t,n){n=n||"0",t=t||2;while((""+e).length<t)e=n+e;return e}`
+pad = (e,t,n)->
+  n = n || "0"
+  t = t || 2
+  while (""+e).length<t
+    e=n+e
+  e
 
 # return date in format yyyy-mm-dd_hh-ii-ss
 getDate = ->
   c = new Date()
-  return c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate()-5)+"_"+c.toLocaleTimeString().replace(/\D/g,'-')+"."+pad(c.getMilliseconds(),3)
+  return c.getFullYear()+"-"+pad(c.getMonth()+1)+"-"+pad(c.getDate())+"_"+c.toLocaleTimeString().replace(/\D/g,'-')+"."+pad(c.getMilliseconds(),3)
+
+asDate = (datestring) ->
+  new Date datestring.replace(/_/,'T').replace(/T(.+)-(.+)-/,"T$1:$2:")
 
 # Generate a system UID.  This should be created with the username and
 # time included, such that collisions when running upon multiple systems
@@ -111,6 +169,17 @@ randomUID = ->
 
 # Find and return an array of hashes, one for each existing bug.
 getBugs = ->
+  if ! opts.path
+    print """
+      This directory does not appear to have Klogs on!
+
+      Put them on with:
+
+        klog init
+
+      or try `klog help` for more info
+    """
+    exit()
   files = fs.readdirSync "#{opts.path+opts.store}"
   files.sort()
   $results = []
@@ -121,14 +190,20 @@ getBugs = ->
       buffer = fs.readFileSync "#{opts.path+opts.store}#{file}"
       lines = buffer.toString().split /[\r\n]+/
       # print content
+      $priority = 0
+      $modified = null
       $body = []
       for line in lines
         if m = line.match /^Title: (.*)/
           $title = m[1]
         else if m = line.match /^Type: (.*)/
           $type = m[1]
-        else if m = line.match /^(Added|Modified):(.*)/
-          # ignored
+        else if m = line.match /^Priority: (.*)/
+          $priority = m[1]
+        else if m = line.match /^Added: (.*)/
+          $added = m[1]
+        else if m = line.match /^Modified: (.*)/
+          $modified = m[1]
         else if m = line.match /^Author: (.*)/
           $author = m[1]
         else if m = line.match /^UID: (.*)/
@@ -136,7 +211,9 @@ getBugs = ->
         else if m = line.match /^Status: (.*)/i
           $status = m[1]
         else
-          $body.push line
+          $body.push "\r\n"+line
+      if ! $modified
+        $modified = $added
       $results.push
         file: file
         body: $body
@@ -144,7 +221,10 @@ getBugs = ->
         uid: $uid
         status: $status
         type: $type
+        priority: $priority
         title: $title
+        added: $added
+        modified: $modified
         author: $author || 'unspecified'
 
   return $results
@@ -171,7 +251,24 @@ getBugByUIDORNumber = ($arg) ->
 
     if $bug
       return $bug
-  print "Bug not found: #{$arg}\r\n"
+
+  print "Last resort, trying to search (open issues) for: #{glob.clrs.yellow}#{$arg}#{glob.clrs.reset}"
+  bug = cmd.search
+    return: true
+    terms: $arg
+    state: 'open'
+    all: false
+  if bug
+    hl = if bug.status == 'open' then glob.clrs.green else glob.clrs.red
+    cb = glob.clrs.bright
+    ch = glob.clrs.yellow
+    cr = glob.clrs.reset
+    print "Found: %#{hl}#{bug.uid}#{glob.clrs.reset} [#{ch}#{bug.status}#{cr}] [#{ch+cb}#{bug.type}#{cr}] #{bug.title}"
+    return bug
+  # else
+  #   print bug
+
+  print "Bug not found!!"
   exit 1
 
 # Exit app with error code
@@ -188,7 +285,8 @@ exit = (code) ->
 editFile = (file) ->
   # Open the editor
   $editor = if opts.args.editor then opts.args.editor else if  process.env.EDITOR then process.env.EDITOR else if opts.win then "notepad" else "vim"
-  exec "#{$editor} #{file}"
+  editor file, {}
+  # exec "#{$editor} #{file}"
 
 # Remove the "# klog: " prefix from the given file.
 remove_comments = ($file) ->
@@ -213,10 +311,12 @@ usage = ->
 
       add                 - Add a new bug.
       append              - Append text to an existing bug.
+                            Set type with -t, and use `.` as message for no message
       close               - Change an open bug to closed.
       closed              - List all currently closed bugs.
       edit                - Allow a bug to be edited.
       delete              - Allow a bug to be deleted.
+      destroy             - Destroys the whole klog storage folder (including all issue data!)
       init                - Initialise the system.
       list|search         - Display existing bugs.
       open                - List all currently open bugs.
@@ -229,6 +329,8 @@ usage = ->
       -t, --type          - issue type (default:bug) i.e. feature/enhance/task
       -m, --message       - Use the given message rather than spawning an editor.
       -s, --state         - Restrict matches when searching (open/closed).
+      -a, --all           - Search everywhere (type, and message), not just the title 
+      -p, --priority      - Set the priority (`.` is replaced with `-`, so `.3` will result in `-3`)
 
   '''
      # -e, --editor        - Specify which editor to use.
@@ -238,7 +340,7 @@ hook = (action, file) ->
   if hooks[action]
     hooks[action].run file
 
-# Change the statues of an existing bug.  Valid statuses are
+# Change the statues of an existing bug. Valid statuses are
 # "open" and "closed".
 changeBugState = ($value, $state) ->
 
@@ -252,46 +354,24 @@ changeBugState = ($value, $state) ->
 
   # Ensure the bug isn't already in the specified state.
   if $bug.status == $state
-    print "The bug is already $state!\r\n"
+    print "The bug is already #{$state}!\r\n"
     exit 1
 
   # Now write out the new status section.
-  content = """\r\n\r\n
+  content = """\r\n
   Modified: #{opts.date}
-  Status: #{$state}\r\n
+  Status: #{$state}
   """
 
   fs.appendFileSync opts.path+opts.store+$bug.file, content
 
+  add = asDate $bug.added
+  mod = asDate opts.date
+  print "("+Math.round(( (mod - add) / 1000 / 60 / 60 )*100)/100 + " hours after issue was added)"
+  # print $bug
+
   # If there is a hook, run it.
   hook $state, $bug.file
-
-get_title = (callback)->
-  stdin = process.openStdin()
-  process.stdout.write "Title: "
-  stdin.addListener "data", (d) ->
-    opts.args.title = d.toString().substring(0, d.length-1)
-    process.stdin.destroy()
-    callback()
-
-get_message = (callback)->
-  stdin = process.openStdin()
-  process.stdout.write "Message: "
-  print stdin.addListener "data", (d) ->
-    opts.args.message = d.toString().substring(0, d.length-1)
-    process.stdin.destroy()
-    callback()
-
-write_file = ->
-  fs.writeFileSync opts.args.file, opts.args.template + opts.args.message+ "\r\n"
-
-get_items = ->
-  if ! opts.args.title
-    get_title get_items
-  else if ! opts.args.message
-    get_message get_items
-  else
-    print "got them all"
 
 get_user_details = (callback) ->
   if opts.user && opts.email
@@ -367,10 +447,14 @@ cmd = {}
 # Add a new bug.
 cmd.add = (args) ->
 
+  print args
+
   # Make a "random" filename, with the same UID as the content.
   $uid = randomUID()
   $title = args.title
   $type = args.type || 'bug'
+  $priority = args.priority || '0'
+  $priority = $priority.replace /\./, '-'
 
   opts.args.file = "#{opts.date}.#{$uid}.log";
 
@@ -378,6 +462,7 @@ cmd.add = (args) ->
   opts.args.template = """
   UID: #{$uid}
   Type: #{$type}
+  Priority: #{$priority}
   Title: #{$title}
   Added: #{opts.date}
   Author: #{opts.user}
@@ -388,7 +473,10 @@ cmd.add = (args) ->
   # If we were given a message, add it to the file, and return without
   # invoking the editor.
   if args.message
-    fs.writeFileSync opts.path+opts.store+opts.args.file, opts.args.template + args.message+ "\r\n"
+    fs.writeFileSync opts.path+opts.store+opts.args.file, opts.args.template + args.message
+
+    print "added issue %#{glob.clrs.yellow}#{$uid}#{glob.clrs.reset}"
+
     # If there is a hook, run it.
     hook "add", opts.args.file
     return
@@ -415,6 +503,8 @@ cmd.add = (args) ->
     # Once it was saved remove the lines that mention "# klog: "
     remove_comments opts.args.file
 
+    print "added issue %#{glob.clrs.yellow}#{$uid}#{glob.clrs.reset}"
+
     # If there is a hook, run it.
     hook "add", opts.args.file
 
@@ -438,8 +528,15 @@ cmd.append = (args) ->
     $bug = getBugByUIDORNumber args.id
 
     # If we were given a message add it, otherwise spawn the editor.
-    if args.message
-      $out = "\r\nModified: #{opts.date}\r\n#{opts.args.message}\r\n"
+    # redundant when the message argument is required
+    if args.message || args.type
+      $out = "\r\n\r\nModified: #{opts.date}\r\n"
+      if args.type
+        $out += "Type: #{args.type}\r\n"
+      if args.priority
+        $out += "Priority: #{args.priority.replace /[\.]/, '-'}\r\n"
+      if args.message != '.'
+        $out += "#{args.message||''}"
       fs.appendFileSync opts.path+opts.store+$bug.file, $out
       return
     else
@@ -484,18 +581,161 @@ cmd.html = (args) ->
     <meta charset="UTF-8">
     <title>klog : issue tracking and time management</title>
     <style type='text/css'>
+      /*
+      This is the<a href="#" class="button default inline">Default</a> action!
+      <a href="#" class="button blue">Blue</a>
+      */
+
+      .button {
+        margin: 0 15px 15px 0;
+        font-family: 'Lucida Grande', 'Helvetica Neue', sans-serif;
+        font-size: 13px;
+        display: inline-block;
+        background-color: #f5f5f5;
+        background-image: -webkit-linear-gradient(top,#f5f5f5,#f1f1f1);
+        background-image: -moz-linear-gradient(top,#f5f5f5,#f1f1f1);
+        background-image: -ms-linear-gradient(top,#f5f5f5,#f1f1f1);
+        background-image: -o-linear-gradient(top,#f5f5f5,#f1f1f1);
+        background-image: linear-gradient(top,#f5f5f5,#f1f1f1);
+        color: #444;
+        
+        border: 1px solid #dcdcdc;
+        -webkit-border-radius: 2px;
+        -moz-border-radius: 2px;
+        border-radius: 2px;
+        
+        cursor: default;
+        font-size: 11px;
+        font-weight: bold;
+        text-align: center;
+        height: 27px;
+        line-height: 27px;
+        min-width: 54px;
+        padding: 0 8px;
+        text-decoration: none;
+      }
+
+      .button.inline {
+        margin: 0 .2em 0 .5em;
+      }
+
+      .button:hover {
+        background-color: #F8F8F8;
+        background-image: -webkit-linear-gradient(top,#f8f8f8,#f1f1f1);
+        background-image: -moz-linear-gradient(top,#f8f8f8,#f1f1f1);
+        background-image: -ms-linear-gradient(top,#f8f8f8,#f1f1f1);
+        background-image: -o-linear-gradient(top,#f8f8f8,#f1f1f1);
+        background-image: linear-gradient(top,#f8f8f8,#f1f1f1);
+        
+        border: 1px solid #C6C6C6;
+        color: #333;
+        
+        -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.1);
+        -moz-box-shadow: 0px 1px 1px rgba(0,0,0,.1);
+        box-shadow: 0px 1px 1px rgba(0,0,0,.1);
+        text-decoration: none;
+
+        cursor: pointer;
+      }
+
+      /* blue */
+
+      .button.blue {
+        background-color: #4D90FE;
+        background-image: -webkit-linear-gradient(top,#4d90fe,#4787ed);
+        background-image: -moz-linear-gradient(top,#4d90fe,#4787ed);
+        background-image: -ms-linear-gradient(top,#4d90fe,#4787ed);
+        background-image: -o-linear-gradient(top,#4d90fe,#4787ed);
+        background-image: linear-gradient(top,#4d90fe,#4787ed);
+
+        border: 1px solid #3079ED;
+        color: white;
+      }
+
+      .button.blue:hover {
+        border: 1px solid #2F5BB7;
+        
+        background-color: #357AE8;
+        background-image: -webkit-linear-gradient(top,#4d90fe,#357ae8);
+        background-image: -moz-linear-gradient(top,#4d90fe,#357ae8);
+        background-image: -ms-linear-gradient(top,#4d90fe,#357ae8);
+        background-image: -o-linear-gradient(top,#4d90fe,#357ae8);
+        background-image: linear-gradient(top,#4d90fe,#357ae8);
+        
+        -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.1);
+        -moz-box-shadow: 0 1px 1px rgba(0,0,0,.1);
+        box-shadow: 0 1px 1px rgba(0,0,0,.1);
+      }
+
+      /* red */
+
+      .button.red {
+        background-color: #D14836;
+        background-image: -webkit-linear-gradient(top,#dd4b39,#d14836);
+        background-image: -moz-linear-gradient(top,#dd4b39,#d14836);
+        background-image: -ms-linear-gradient(top,#dd4b39,#d14836);
+        background-image: -o-linear-gradient(top,#dd4b39,#d14836);
+        background-image: linear-gradient(top,#dd4b39,#d14836);
+        
+        border: 1px solid transparent;
+        color: white;
+        text-shadow: 0 1px rgba(0, 0, 0, 0.1);
+      }
+
+      .button.red:hover {
+        background-color: #C53727;
+        background-image: -webkit-linear-gradient(top,#dd4b39,#c53727);
+        background-image: -moz-linear-gradient(top,#dd4b39,#c53727);
+        background-image: -ms-linear-gradient(top,#dd4b39,#c53727);
+        background-image: -o-linear-gradient(top,#dd4b39,#c53727);
+        background-image: linear-gradient(top,#dd4b39,#c53727); 
+      }
+
+      /* green */
+
+      .button.green {
+        background-color: #3D9400;
+        background-image: -webkit-linear-gradient(top,#3d9400,#398a00);
+        background-image: -moz-linear-gradient(top,#3d9400,#398a00);
+        background-image: -ms-linear-gradient(top,#3d9400,#398a00);
+        background-image: -o-linear-gradient(top,#3d9400,#398a00);
+        background-image: linear-gradient(top,#3d9400,#398a00);
+        
+        border: 1px solid #29691D;
+        color: white;
+        text-shadow: 0 1px rgba(0, 0, 0, 0.1);
+      }
+
+      .button.green:hover {
+        background-color: #368200;
+        background-image: -webkit-linear-gradient(top,#3d9400,#368200);
+        background-image: -moz-linear-gradient(top,#3d9400,#368200);
+        background-image: -ms-linear-gradient(top,#3d9400,#368200);
+        background-image: -o-linear-gradient(top,#3d9400,#368200);
+        background-image: linear-gradient(top,#3d9400,#368200);
+        
+        border: 1px solid #2D6200;
+        text-shadow: 0 1px rgba(0, 0, 0, 0.3);
+      }
+    </style>
+    <style type='text/css'>
     body{
       font-family: century gothic;
     }
     .bug {
-      background-color: silver;
+      background-color: #F7F7F7;
+      border: 5px solid #666666;
       border-radius: 0.5em 0.5em 0.5em 0.5em;
       margin: 0.5em 0;
       padding: 0.3em 1em;
     }
+    .bug h3{
+      font-size: 2em;
+      margin: 0.2em 0;
+    }
     #command-intro {
       padding-left: 0.5em;
-      width: 37px;
+      width: 3.4em;
     }
     input {
       background-color: black;
@@ -505,32 +745,68 @@ cmd.html = (args) ->
       height: 2em;
       margin: 0;
       padding: 0;
+      font-size: 1em;
     }
     h1, h2, h3, h4, h5, h6, p, ul{
       clear: both;
     }
     #command{
-      width: 40em
+      width: 40em;
     }
     #execute{
-      border-left: 1px solid red
+      border-left: 1px solid red;
+      padding: 0 0.3em;
+    }
+    ul.nav{
+      padding-top: 1em;
+    }
+    ul.nav li{
+      float: left;
+      list-style-type: none;
+      margin: 0 1em 0 -1em;
+      padding: 0;
+    }
+    ul.actions li{
+      float: left;
+      list-style-type: none;
+    }
+    ul.actions{
+      padding: 0;
+    }
+    ul {
+      margin: 0 0 1em;
+      padding: 0 1em;
+    }
+    ul.attributes {
+      color: #666666;
+      list-style-type: circle;
+    }
+    .clear{
+      clear: both;
+    }
+    form{
+      border: 5px solid #666666;
+      border-radius: 0.3em 0.3em 0.3em 0.3em;
+      height: 2em;
+      width: 49.05em;
     }
     </style>
   </head>
   <body onload="document.getElementById('command').focus()">
     
-    <h1>Klog : issue tracking and time management</h1>
-
-    <ul>
-      <li><a href='#open' class='button'>#{$open_count} : open bugs</a></li>
-      <li><a href='#closed' class='button'>#{$closed_count} : closed bugs</a></li>
-    </ul>
+    <h1>Klog : distributed issue tracking</h1>
 
     <form action='.' method='POST'>
       <input type="text" value="$ klog" readonly="readonly" name="intro" id="command-intro">
       <input type="text" name="command" id="command">
       <input type="submit" id="execute" value="execute!">
     </form>
+
+    <ul class='nav'>
+      <li><a href='#open' class='button'>#{$open_count} : open bugs</a></li>
+      <li><a href='#closed' class='button'>#{$closed_count} : closed bugs</a></li>
+    </ul>
+    <hr class='clear' />
 
     <a name='open'></a>
     <h2 id="open">Open bugs</h2>
@@ -539,13 +815,20 @@ cmd.html = (args) ->
     out += """
       <div class='bug'>
         <h3>#{$b.title}</h3>
-        <ul>
-          <li>UID: #{$b.uid}</li>
-          <li>Added: #{$b.added}</li>
-          <li>Author: #{$b.author}</li>
-          <li>Type: #{$b.type}</li>
+        <ul class='attributes'>
+          <li><strong>UID</strong>: #{$b.uid}</li>
+          <li><strong>Added</strong>: #{$b.added}</li>
+          <li><strong>Author</strong>: #{$b.author}</li>
+          <li><strong>Type</strong>: #{$b.type}</li>
+          <li><strong>Priority</strong>: #{$b.priority}</li>
         </ul>
-        <p>#{$b.body.join "\r\n"}</p>
+        <p>#{$b.body.join "<br>\r\n<br>\r\n"}</p>
+        <hr>
+        <ul class='actions'>
+          <li><a href='./?command=close #{$b.uid}' class='button blue'>Close</a></li>
+          <li><a href='./?command=delete #{$b.uid} -f' class='button red' onclick='return confirm("Do you really want to delete this item?")'>Delete</a></li>
+        </ul>
+        <br class='clear' />
       </div>
     """
   out += """
@@ -555,13 +838,20 @@ cmd.html = (args) ->
     out += """
       <div class='bug'>
         <h3>#{$b.title}</h3>
-        <ul>
-          <li>UID: #{$b.uid}</li>
-          <li>Added: #{$b.added}</li>
-          <li>Author: #{$b.author}</li>
-          <li>Type: #{$b.type}</li>
+        <ul class='attributes'>
+          <li><strong>UID</strong>: #{$b.uid}</li>
+          <li><strong>Added</strong>: #{$b.added}</li>
+          <li><strong>Author</strong>: #{$b.author}</li>
+          <li><strong>Type</strong>: #{$b.type}</li>
+          <li><strong>Priority</strong>: #{$b.priority}</li>
         </ul>
-        <p>#{$b.body.join "\r\n"}</p>
+        <p>#{$b.body.join "<br>\r\n<br>\r\n"}</p>
+        <hr>
+        <ul class='actions'>
+          <li><a href='./?command=reopen #{$b.uid}' class='button green'>Re-open</a></li>
+          <li><a href='./?command=delete #{$b.uid} -f' class='button red' onclick='return confirm("Do you really want to delete this item?")'>Delete</a></li>
+        </ul>
+        <br class='clear' />
       </div>
     """
   out += """
@@ -588,52 +878,108 @@ cmd.search = (args) ->
   $bugs = getBugs()
 
   # The state of the bugs the user is interested in.
-  $state = if args.state then args.state else 'all'
+  $state = args.state || 'all'
 
   # The type of the bugs the user is interested in.
   $type = args.type || "all"
 
+  # The priority of the bugs the user is interested in.
+  $priority = args.priority || "all"
+
+  # catch unset priority, and reset to all
+  if $priority == true then $priority = "all"
+  
+  if m = $priority.match /(.+)([+-])$/
+    $priority = m[1]
+    direction = m[2]
+  else direction = null
+  
   # print "will search for `#{$terms}` with state `#{$state}` and type `#{$type}`"
 
+  found = []
   # For each bug
   for $bug in $bugs
 
-    # Find basic meta-data.
-    $b_title  = $bug.title
-    $b_type   = $bug.type
-    $b_status = $bug.status
-    $b_uid    = $bug.uid
-    $b_file   = $bug.file
-    $b_number = $bug.number
-
     # If the user is being specific about status then
     # skip ones that don't match, as this is cheap.
-    if $state != "all" and $state.toLowerCase() != $b_status.toLowerCase()
+    if $state != "all" and $state.toLowerCase() != $bug.status.toLowerCase()
       continue
 
     # If the user is being specific about type then
     # skip ones that don't match
-    if $type != "all" and $type.toLowerCase() != $b_type.toLowerCase()
+    if $type != "all" and $type.toLowerCase() != $bug.type.toLowerCase()
       continue
+
+    # If the user is being specific about priority then
+    # skip ones that don't match
+    if ($priority+'').match /\./
+      $priority = 0-$priority*10
+
+    # print [$priority, direction, parseInt($bug.priority)]
+
+    $bug.priority = parseInt $bug.priority
+    if $priority != "all"
+      $priority = parseInt $priority
+      if direction == '+' and $priority > $bug.priority
+        continue
+      else if direction == null and $priority != $bug.priority
+        continue
+      else if direction == '-' and $priority < $bug.priority
+        continue
 
     # If there are search terms then search the title.
     # All terms must match.
     $match = 1
+    $b_body = $bug.body.join('').replace(/(\\.|[^\w\s])/g,'')
+    # print $b_body
+    pool = if args.all then $bug.title+$bug.type+$b_body else $bug.title
     if args.terms # there are $terms
-      for $term in $terms.split /[ \t]/
-        if ! $b_title.match new RegExp $term, 'i'
+      for $term in $terms.split /[ \t]+/
+        if ! pool.match new RegExp $term, 'i'
           $match = 0
+
     # If we didn't find a match move on.
     continue unless $match
 
+    found.push $bug
+
+  if args.return && found.length == 1
+    return found[0]
+  else
+    output_cli found, 'priority'
+
+# output bugs list to command line, optionally with sorting
+output_cli = (bugs,sort)->
+
+  if sort == 'priority'
+    bugs.sort (a,b)-> b.priority - a.priority
+  else if sort == 'added'
+    bugs.sort (a,b)->
+      bb = parseInt b.added.replace /\D/g,''
+      aa = parseInt a.added.replace /\D/g,''
+      bb - aa
+  else if sort == 'modified'
+    bugs.sort (a,b)->
+      bb = parseInt b.modified.replace /\D/g,''
+      aa = parseInt a.modified.replace /\D/g,''
+      bb - aa
+
+  # console.log bugs
+
+  out = []
+  for bug in bugs
+
     # Otherwise show a summary of the bug.
-    # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $b_uid, "[".$b_status."]", "[".$b_type."]", $b_title . "\r\n";
+    # print sprintf "%-4s %s %-8s %-9s %s", "#".$b_number, $bug.uid, "[".$bug.status."]", "[".$bug.type."]", $bug.title . "\r\n";
     # removed number: ##{$b_number} 
-    hl = if $b_status == 'open' then glob.clrs.green else glob.clrs.red
+    hl = if bug.status == 'open' then glob.clrs.green else glob.clrs.red
     cb = glob.clrs.bright
     ch = glob.clrs.yellow
     cr = glob.clrs.reset
-    print "%#{hl}#{$b_uid}#{glob.clrs.reset} [#{ch}#{$b_status}#{cr}] [#{ch+cb}#{$b_type}#{cr}] #{$b_title}"
+    pr = if bug.priority > 1 then glob.clrs.bright+glob.clrs.yellow else if bug.priority > 0 then glob.clrs.yellow else if bug.priority < -1 then glob.clrs.gunmetal else glob.clrs.silver  
+    out.push "%#{hl}#{bug.uid}#{glob.clrs.reset} [#{pr}#{pad (bug.priority+'').replace(/^([1-9])/,'+$1'), 2, ' '}#{cr}] [#{ch}#{bug.status}#{cr}] [#{ch+cb}#{bug.type}#{cr}] #{bug.title}"
+  
+  print out.join "\r\n"
 
 # View a specific bug.
 # This means:
@@ -755,8 +1101,8 @@ cmd.delete = (args) ->
       hook "delete", $bug.file
 
     if ! args.force
+      print "About to delete this bug..."
       get_confirmation ->
-        print "About to delete this bug..."
         do_delete()
       , "Phew, that was close!"    
     else
@@ -764,20 +1110,27 @@ cmd.delete = (args) ->
 
 # Inititalise a new .klog directory.
 cmd.init = ->
-  if ! fs.existsSync opts.path+opts.store
-    fs.mkdirSync opts.path+opts.store
+  if ! fs.existsSync opts.store
+    fs.mkdirSync opts.store
+    opts.path = process.cwd()+'/'
     print "#{glob.clrs.gunmetal}Now you have klogs on#{glob.clrs.reset}#{glob.clrs.red}!#{glob.clrs.reset}"
     cmd.setup()
   else
     print "There is already a .klog/ directory present here"
     exit 1
 
+cmd.destroy = (args) ->
+  if args.force
+    exec "rm -Rf #{opts.path+opts.store}"
+  else
+    print "This will destroy all issues. You must force this with `-f`."
+
 cmd.setup = ->
   if opts.user && opts.email
     settings = """
     {
-      "user":"#{opts.path+opts.user || 'John Doe'}",
-      "email":"#{opts.path+opts.email || 'john@thedoughfactory.com'}"
+      "user":"#{opts.user || 'John Doe'}",
+      "email":"#{opts.email || 'john@thedoughfactory.com'}"
     }
     """
     fs.writeFileSync "#{opts.path+opts.store}.gitignore","local"
@@ -799,16 +1152,15 @@ cmd.server = ->
   command = (data) ->
     # POST = JSON.parse POST
     # opts.args._.push data.command.split ' '
-    args = data.command.trim().split ' '
+    if data.command
+      args = data.command.trim().split ' '
     print args
     while process.argv.length > 2
       process.argv.pop()
     _.each args, (v) ->
       process.argv.push v
-
+    opts.date = getDate()
     main()
-
-
 
   http.createServer (req, res) ->
     out_html = ->
@@ -819,7 +1171,7 @@ cmd.server = ->
       res.end cmd.html opts.command.args
 
     if req.method == 'POST'
-      body=''
+      body = ''
       req.on 'data', (data) ->
         body += data
       req.on 'end', ->
@@ -828,11 +1180,12 @@ cmd.server = ->
         out_html()
     else if req.method == 'GET'
       url_parts = url.parse req.url, true
-      print url_parts.query
+      # print url_parts.query
+      command url_parts.query
       out_html()
 
   .listen port
-  console.log "Server running at http://127.0.0.1:#{port}/"
+  print "Serving `#{opts.path}` at http://127.0.0.1:#{port}/"
 
 # parse opts.args and return command object
 # should validate required options, but not their values
@@ -848,7 +1201,7 @@ get_command = ->
   commands =
     add:
       required: ['title','message']
-      valid: ['type']
+      valid: ['type','priority','label']
       args: ->
         if opts.args._.length
           opts.args.title = opts.args._.join ' '
@@ -860,16 +1213,22 @@ get_command = ->
           opts.args.id = id.replace /^%/, ''
     help: {}
     init: {}
-    search:
-      valid: ['type','state']
+    list:
+      valid: ['type','state','terms','all','return','priority']
+      args: ->
+        if subcommand == 'search'
+          opts.args.all = true
+        if opts.args._.length
+          opts.args.terms = opts.args._.join ' '
+          console.log opts.args.terms
     open:
       required: ['state'] # auto populated
-      valid: ['type']
+      valid: ['type','priority']
       args: ->
         opts.args.state = 'open'
     closed:
       required: ['state'] # auto populated
-      valid: ['type']
+      valid: ['type','priority']
       args: ->
         opts.args.state = 'closed'
     view:
@@ -880,8 +1239,8 @@ get_command = ->
       valid: ['editor']
       args: get_id
     append:
-      required: ['id']
-      valid: ['message']
+      required: ['id','message']
+      valid: ['type','priority']
       args: get_id
     reopen:
       required: ['id']
@@ -891,8 +1250,17 @@ get_command = ->
       args: get_id
     html: {}
     server: {}
+    destroy:
+      valid: ['force']
   
-  commands.list = commands.search
+  for command of commands
+    if ! commands[command].valid
+      commands[command].valid = []
+    commands[command].valid.push 'plain' # (no colours in output, and lean towards formatting suited to scripts)
+
+  # print commands
+
+  commands.search = commands.list
 
   # figure out what the command is, or assign `help`
   subcommand = opts.args._.shift() || 'help' # if no arguments
@@ -944,6 +1312,11 @@ main = ->
 
   opts.command.name = opts.command.name.replace /^(open|closed|list)$/, 'search'
 
+  # override colours if `plain` is chosen (probably should implement colours as plugin)
+  if opts.command.args.plain
+    for clr of glob.clrs
+      glob.clrs[clr] = ""
+
   get_required opts.command.needs, ->
     # process.stdout.write "#{glob.clrs.red+glob.clrs.bright}Command: "
     # print opts.command
@@ -956,7 +1329,7 @@ main = ->
       print opts.args
       
     if opts.args.exit
-      exit 0    
+      exit 0
 
     # Ensure we received an argument.
 
@@ -1024,7 +1397,6 @@ glob.clrs = {
   reset:"\u001b[m"
 
 }
-
 
 # get hooks and add them to the glogal hook object
 hooks = {}
