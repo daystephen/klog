@@ -1,0 +1,14 @@
+UID: 2928
+Type: bug
+Priority: 0
+Title: rtf support
+Added: 2013-03-29_21-25-16.241
+Author: Billy Moon
+
+It is quite possible to add rtf support on osx, utalising textutil, and probably on ubuntu using pandoc.
+
+cat ~/Desktop/issue.htm | textutil -convert rtf -stdin -stdout -format html | pbcopy
+
+Modified: 2013-03-29_21-27-13.673
+Type: feature
+Priority: 1
