@@ -8,10 +8,10 @@ klog is an intentionally simple system which allows bugs to be stored
 inside projects, and merged in along with all other changes in exactly the
 way that a user of a distributed revision control system would expect.
 
-currently, clog is implemented as a node.js project, and as such is installable
+currently, klog is implemented as a node.js project, and is installable
 via the node package manager...
 
-    $ npm install klog -g
+    $ [sudo] npm install klog -g
 
 (global flag recommended so the `klog` command is immediately available!)
 

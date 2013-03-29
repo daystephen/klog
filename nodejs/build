@@ -1,1 +1,1 @@
-coffee -c -o lib src/klog.coffee && say ok || say fucked
+coffee -c -o lib src/klog.coffee && say ok || say problem

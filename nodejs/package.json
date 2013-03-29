@@ -1,7 +1,7 @@
 {
   "author": "Billy Moon <billy@itaccess.org> (http://billy.itaccess.org)",
   "name": "klog",
-  "description": "Distributed issue tracking and time management",
+  "description": "Distributed issue tracking",
   "keywords": [
     "issue",
     "track",
@@ -14,7 +14,7 @@
     "klog",
     "clog"
   ],
-  "version": "0.4.9",
+  "version": "0.5.0",
   "homepage": "http://billymoon.github.com/klog/",
   "repository": {
     "type": "git",
@@ -37,6 +37,6 @@
     "klog": "./bin/klog"
   },
   "bugs": "https://github.com/billymoon/klog/issues",
-  "_id": "klog@0.4.9",
+  "_id": "klog@0.5.0",
   "_from": "klog"
 }
