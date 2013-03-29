@@ -5,9 +5,7 @@ if ! base
 html
   head
     block head
-      title klog : distributed issue tracking and work log
-      :coffeescript
-        1
+      title klog : distributed issue tracking finally done right
       :stylus
         body
           font-family verdana, sans-serif
@@ -47,9 +45,9 @@ html
     #all
       #banner: a(href="#{base}"): img(src='klog-banner.jpg')
       h2.title klog 
-        span.silver helps you to keep track of your projects
+        span.silver issue tracking that works on a submarine!
 
-      p klog is designed to be a districuted issue tracking and time management tool. as such, it should integrate with any distributed version control system. I use git, but klog is vcs agnostic - just track the files along with your code!
+      p klog is designed to be a distributed issue tracking tool. as such, it should integrate with any distributed version control system. I use git, but klog is vcs agnostic - simply track the issue files along with your code!
 
       h3 Get the code!
 
@@ -62,7 +60,7 @@ html
 
       h3 Installation
 
-      p klog is a node.js app, written in javascript (actually coffee-script) so is available via npm.
+      p klog is currently a node.js app, written in javascript (actually coffee-script) and is available via npm.
 
       p.silver i it is worth putting the `-g` on there so the binary (`klog`) becomes available after install!
 
@@ -72,7 +70,7 @@ html
 
       p klog is designed to make your issue tracking easier by having a simple command line interface
 
-      p.silver: i we are planning to implement a web interface soon!
+      p.silver: i there is a proof-of-method imlementation of a web interface, fancy one coming soon!
 
       :code
         $ klog init
@@ -80,7 +78,7 @@ html
         $ klog add IE6 not rendering page correctly -m "ie6 needs special treatment to render the page correctly"
         
         $ klog list
-        %a6a0 [open] [bug] IE6 not rendering page correctly
+        %a6a0 [ 0] [open] [bug] IE6 not rendering page correctly
 
         $ klog view a6a0
         UID: a6a0
@@ -95,15 +93,9 @@ html
         $ # business as usual
       h3 Issue tracking
 
-      p files are stored as plain text files, witha  filename based on the exact time the issue was raised (millisecond precision) and the firstbits of a hash generated from the authors email address. these firstbits become the UID of the issue, preventing colision with other issues being raised by other developers at the same time.
+      p files are stored as plain text files, with a filename (bug id) which uses a hash based on the exact time the issue was raised (millisecond precision) and the author's email address. these firstbits become the UID of the issue, preventing colision with other issues being raised by other developers at the same time.
 
       p by keeping all the issues with the git repo, it becomes a great offline tool for managing a project. any developer who has the repo, also has the tools needed to track progress, pick a task to work on, and read the rationale behind chages to the code. this feature is also great for archiving projects, with the confidence that all the related discussion and material is all in one place!
-
-      h3 Time management (work log)
-
-      p one issue that keeps coming up for me personally, is how to effectively track work activity, and time spent on a project. after trying out several solutions, from online log files, spreadsheets, and time tracking software, I ended up reverting to plain old time-stamped log files. after programming a hotkey to insert the date I would just write down when I started working, then each thing I did as a brief description line, and when I finished. this would constitute a `block` of work, and I would then calculate the time spent on each block. this system has been working great for me, but I could not help feeling it could be much better.
-
-      p my current best idea, is to try to link the process of tracking issues, making commits, and managing time, as they are all very much integral to the work process. when I am working on a bug, I want that work to be related to a `block` that can be identified how long, and when it took place, and also the code and comments relating to the work. filling the gap here is what klog is all about.
 
       #foot
         block foot
