@@ -1,170 +1,63 @@
-## NAME
+## klog issue tracking that works on a submarine!
 
-klog - A simple distributed bug tracking system and time management tool
+klog is designed to be a distributed issue tracking tool. as such, it should
+integrate with any distributed version control system. I use git, but klog is
+vcs agnostic - simply track the issue files along with your code!
 
-## ABOUT
+### Get the code!
 
-klog is an intentionally simple system which allows bugs to be stored
-inside projects, and merged in along with all other changes in exactly the
-way that a user of a distributed revision control system would expect.
+  * view the project on [GitHub : billymoon/klog](https://github.com/billymoon/klog)
+  * [Download ZIP File](https://github.com/billymoon/klog/zipball/master)
+  * [Download TAR Ball](https://github.com/billymoon/klog/tarball/master)
+  * [npm page](https://npmjs.org/package/klog)
 
-In short a project will have any and all bugs stored beneath the **.klog**
-directory.  These issues will be stored using a hash of the user's details and
-the exact time (microsecond precise) of the issue being created such that
-multiple people merging and commiting will be unlikely to ever see conflicts.
+### Installation
 
-Issues always have one of two states:
+klog is currently a node.js app, written in javascript (actually coffee-
+script) and is available via npm.
 
-* Open
-* Closed
+_it is worth putting the `-g` on there so the binary (`klog`) becomes
+available after install!_
 
-They will also have a type:
+    $ npm install klog -g
 
-* Bug
-* Feature
-* Enhancement
-* Etc...
+### Basic usage
 
-Each bug will have an associated UID, which is derived form the first bits of a
-hash of the user details (optained form git or command line) and the exact
-moment the issue is generated.
+klog is designed to make your issue tracking easier by having a simple command
+line interface
 
-## USING IT
+_there is a proof-of-method imlementation of a web interface, fancy one coming
+soon!_
 
-Usage of klog is divided into several distinct cases:
-
-* Initialising a new project.
-* Adding a bug.
-* Searching for bugs.
-* Viewing a specific bug.
-* Updating a bug, or appending to an existing bug report.
-* Closing or re-opening a bug.
-* Deleting a bug (only for mistakes, necessary when it can be closed)
-
-These actions all work in a consistent manner, to avoid unpleasant suprises.
-
-## USAGE EXAMPLES
-
-To initialise a bug database within your project run:
-
-    klog init
-
-Once you've initialised your klog database you will need to ensure that
-you add the **.klog** database to your revision control system.
-
-To add a new bug, optionally specifying a title for it, please run:
-
-    klog add This is my bug title
-
-If no title is specified a bug report will be created with a default
-title.  This will open an editor for you to enter the bug report text.
-
-The editer may be specified with the **--editor** flag, the EDITOR environmental
-variable, and will otherwise default to **vim**.
-
-Once a bug report has been created you should find that it is visible in the
-output of "klog list" or "klog open".  In both cases you'll see output which
-looks something like this:
-
-    %edda [closed] [bug] testing me
-    %e45c [closed] [feature] This is atest
-    %22af [open] [bug] This is my bug title
-
-This listing report shows several things:  The unique id of the issue, the state
-of the issue ("open" vs. "closed"), the type of issue (bug/feature/etc...) and the title of the issue.
-
-Each of the operations that is specific to a single bug report will allow you
-to specify the number of the bug.  For example if you wished to update the
-last bug, to append some text to it, you could run:
-
-    klog append edda
-
-Similarly you could close the bug by running:
-
-    klog close 22af
-
-Note that to close a bug you do not need to give a justification, or add
-any content.  A bug may go from freshly opened to closed with no need for
-further updates.
-
-## BUG FILE FORMAT
-
-Internally each bug is stored in a file, beneath the **.klog** directory.
-
-Each bug file has a random name (first bits of a hash including user details,
-and exact time of generation) which is designed to avoid potential collisions
-if a repository is shared between many users, upon different systems, as is
-common with distributed revision controls.
-
-Each bug report will have several fixed fields at the beginning, as this
-example shows:
-
-    Title: This is atest
-    UID: ed46
-    Added: Sun sept 16 22:45:42 2012
+    $ klog init
+    $ klog add IE6 not rendering page correctly -m "ie6 needs special treatment to render the page correctly"
+    $ klog list %a6a0 [ 0] [open] [bug] IE6 not rendering page correctly
+    $ klog view a6a0
+    UID: a6a0
+    Type: bug
+    Title: IE6 not rendering page correctly
+    Added: 2012-09-12_22-09-13.966
+    Author: Billy Moon
     Status: open
 
-    I like klogs, but I have none.
+    ie6 needs special treatment to render the page correctly
+    $ # business as usual
 
-The UID is essentially random, but should be unique, and is the portable
-sane way to refer to bugs.  When running **klog list** you'll see the UID
-lsited along with the other details of the bug. This should be the only
-reference used to identify bugs.
+### Issue tracking
 
-## CUSTOMIZATION
+files are stored as plain text files, with a filename (bug id) which uses a
+hash based on the exact time the issue was raised (millisecond precision) and
+the author's email address. these firstbits become the UID of the issue,
+preventing colision with other issues being raised by other developers at the
+same time.
 
-The template which is presented to the user when they report a new bug
-may be replaced.  If the file ".klog/new-bug-template" is present the
-contents of that file will be inserted in new reports, rather than the
-default message.
+by keeping all the issues with the git repo, it becomes a great offline tool
+for managing a project. any developer who has the repo, also has the tools
+needed to track progress, pick a task to work on, and read the rationale
+behind chages to the code. this feature is also great for archiving projects,
+with the confidence that all the related discussion and material is all in one
+place!
 
-If the file **.klog/hook** exists, and is executable, it will be invoked
-when new bugs are added, bugs are closed, or comments are updated.
+_this project is very much in it's early stages and should be considered a
+development project, not yet fit for production. watch out for version 1.0.0!_
 
-The hook will be invoked with two arguments, the first will be a string
-defining the action which has caused the invocation, the second will be
-the UID of the bug file.  For example you might use this to auto-add
-new bug reports to the repository with a hook like this:
-
-    #!/bin/sh
-    if [ "$1" = "add" ]; then
-        git add "$2"
-    fi
-
-## PLANS
-
-There are many ideas in the pipeline to develop this project further, but
-nothing is yet set in stone. The goals currently, are to maintain flexibility,
-remove dependencies, develop feature rich command line interface, and
-allow tight integration with distributed version control systems.
-
-## We eat our own dog-food!
-
-Here is a list generated by klog itself, for the current issue list of the
-klog project:
-
-    %f06e [open] [bug] editor runs as background process
-    %25c3 [open] [bug] process does not wait for editor
-    %dc9b [open] [feature] work calculator
-    %590b [open] [feature] generate html and flot data
-    %96ba [open] [feature] messages input unquoted
-    %862e [open] [feature] reduce necessary flags and options
-    %0a8f [open] [feature] possible firm input commands
-    %16d6 [open] [feature] confirmation for delete
-    %c86c [open] [feature] simple gui interface
-    %5c5a [open] [feature] only edit messages and not header
-    %2918 [open] [feature] validate all input
-    %c4c8 [open] [feature] add email address of the author
-    %2136 [open] [feature] port to nodejs and php
-    %c8b6 [open] [feature] include klog binary in the .klog directory
-    %b35f [open] [feature] create server interface
-    %deb0 [open] [feature] seperate source into concatable files
-    %5408 [open] [feature] optimize web interface for phones
-    %0d02 [open] [feature] optimize html reports for printing
-    %66e9 [open] [feature] use gitub style tags
-    %6b91 [open] [feature] add asignee to head
-    %353a [open] [feature] add priority
-    %e4e2 [open] [feature] allow comments on issues
-    %4e02 [open] [enhance] remove repeating code for hook
-    %9c2e [open] [feature] add attachments to issues
-    %f830 [open] [bug] firstbits interpreted as exponential

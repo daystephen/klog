@@ -1,0 +1,111 @@
+0 info it worked if it ends with ok
+1 verbose cli [ 'node', '/usr/local/bin/npm', 'publish' ]
+2 info using npm@1.1.26
+3 info using node@v0.8.10
+4 verbose config file /Users/itaccess/.npmrc
+5 verbose config file /usr/local/etc/npmrc
+6 verbose config file /usr/local/lib/node_modules/npm/npmrc
+7 verbose publish [ '.' ]
+8 verbose read json /Users/itaccess/Documents/projects/mine/klog-files/klog/nodejs/package.json
+9 verbose cache add [ '.', null ]
+10 silly cache add name=undefined spec="." args=[".",null]
+11 verbose parsed url { pathname: '.', path: '.', href: '.' }
+12 verbose read json package.json
+13 verbose tar pack [ '/var/folders/v_/w2_4r0hn6_3cvyp3j839r_v40000gw/T/npm-1364602036051/1364602036051-0.4526752387173474/tmp.tgz',
+13 verbose tar pack   '.' ]
+14 verbose tarball /var/folders/v_/w2_4r0hn6_3cvyp3j839r_v40000gw/T/npm-1364602036051/1364602036051-0.4526752387173474/tmp.tgz
+15 verbose folder .
+16 info prepublish klog@0.5.0
+17 verbose tar unpack /var/folders/v_/w2_4r0hn6_3cvyp3j839r_v40000gw/T/npm-1364602036051/1364602036051-0.4526752387173474/tmp.tgz
+18 silly gunzTarPerm modes [ '755', '644' ]
+19 silly gunzTarPerm extractEntry package.json
+20 silly gunzTarPerm extractEntry README.md
+21 silly gunzTarPerm extractEntry LICENSE
+22 silly gunzTarPerm extractEntry bin/klog
+23 silly gunzTarPerm extractEntry build
+24 silly gunzTarPerm extractEntry CHANGELOG.md
+25 silly gunzTarPerm extractEntry lib/editor.js
+26 silly gunzTarPerm extractEntry lib/klog.js
+27 silly gunzTarPerm extractEntry lib/md5.js
+28 silly gunzTarPerm extractEntry lib/underscore-min.js
+29 silly gunzTarPerm extractEntry src/klog.coffee
+30 verbose read json /var/folders/v_/w2_4r0hn6_3cvyp3j839r_v40000gw/T/npm-1364602036051/1364602036051-0.4526752387173474/package/package.json
+31 verbose from cache /var/folders/v_/w2_4r0hn6_3cvyp3j839r_v40000gw/T/npm-1364602036051/1364602036051-0.4526752387173474/package/package.json
+32 verbose tar pack [ '/Users/itaccess/.npm/klog/0.5.0/package.tgz',
+32 verbose tar pack   '/var/folders/v_/w2_4r0hn6_3cvyp3j839r_v40000gw/T/npm-1364602036051/1364602036051-0.4526752387173474/package' ]
+33 verbose tarball /Users/itaccess/.npm/klog/0.5.0/package.tgz
+34 verbose folder /var/folders/v_/w2_4r0hn6_3cvyp3j839r_v40000gw/T/npm-1364602036051/1364602036051-0.4526752387173474/package
+35 verbose tar unpack /Users/itaccess/.npm/klog/0.5.0/package.tgz
+36 silly gunzTarPerm modes [ '755', '644' ]
+37 silly gunzTarPerm extractEntry package.json
+38 silly gunzTarPerm extractEntry README.md
+39 silly gunzTarPerm extractEntry LICENSE
+40 silly gunzTarPerm extractEntry bin/klog
+41 silly gunzTarPerm extractEntry build
+42 silly gunzTarPerm extractEntry CHANGELOG.md
+43 silly gunzTarPerm extractEntry lib/editor.js
+44 silly gunzTarPerm extractEntry lib/klog.js
+45 silly gunzTarPerm extractEntry lib/md5.js
+46 silly gunzTarPerm extractEntry lib/underscore-min.js
+47 silly gunzTarPerm extractEntry src/klog.coffee
+48 verbose read json /Users/itaccess/.npm/klog/0.5.0/package/package.json
+49 silly shasum updated bytes 32070
+50 info shasum c09a0c3d0d173c611e34adeb96f8e198c66b3269
+50 info shasum /Users/itaccess/.npm/klog/0.5.0/package.tgz
+51 verbose from cache /Users/itaccess/.npm/klog/0.5.0/package/package.json
+52 verbose chmod /Users/itaccess/.npm/klog/0.5.0/package.tgz 644
+53 verbose chown /Users/itaccess/.npm/klog/0.5.0/package.tgz [ 508, 20 ]
+54 silly publish { author:
+54 silly publish    { name: 'Billy Moon',
+54 silly publish      email: 'billy@itaccess.org',
+54 silly publish      url: 'http://billy.itaccess.org' },
+54 silly publish   name: 'klog',
+54 silly publish   description: 'Distributed issue tracking',
+54 silly publish   keywords:
+54 silly publish    [ 'issue',
+54 silly publish      'track',
+54 silly publish      'tracking',
+54 silly publish      'distributed',
+54 silly publish      'work',
+54 silly publish      'log',
+54 silly publish      'time',
+54 silly publish      'management',
+54 silly publish      'klog',
+54 silly publish      'clog' ],
+54 silly publish   version: '0.5.0',
+54 silly publish   homepage: 'http://billymoon.github.com/klog/',
+54 silly publish   repository: { type: 'git', url: 'git://github.com/billymoon/klog.git' },
+54 silly publish   licenses:
+54 silly publish    [ { type: 'MIT',
+54 silly publish        url: 'https://raw.github.com/billymoon/klog/master/nodejs/LICENSE' } ],
+54 silly publish   engines: { node: '>=0.4.0' },
+54 silly publish   directories: { lib: './lib' },
+54 silly publish   main: './lib/klog',
+54 silly publish   bin: { klog: './bin/klog' },
+54 silly publish   bugs: 'https://github.com/billymoon/klog/issues',
+54 silly publish   _id: 'klog@0.5.0',
+54 silly publish   _from: 'klog',
+54 silly publish   readme: '## klog issue tracking that works on a submarine!\n\nklog is designed to be a distributed issue tracking tool. as such, it should\nintegrate with any distributed version control system. I use git, but klog is\nvcs agnostic - simply track the issue files along with your code!\n\n### Get the code!\n\n  * view the project on [GitHub : billymoon/klog](https://github.com/billymoon/klog)\n  * [Download ZIP File](https://github.com/billymoon/klog/zipball/master)\n  * [Download TAR Ball](https://github.com/billymoon/klog/tarball/master)\n  * [npm page](https://npmjs.org/package/klog)\n\n### Installation\n\nklog is currently a node.js app, written in javascript (actually coffee-\nscript) and is available via npm.\n\n_it is worth putting the `-g` on there so the binary (`klog`) becomes\navailable after install!_\n\n    $ npm install klog -g\n\n### Basic usage\n\nklog is designed to make your issue tracking easier by having a simple command\nline interface\n\n_there is a proof-of-method imlementation of a web interface, fancy one coming\nsoon!_\n\n    $ klog init\n    $ klog add IE6 not rendering page correctly -m "ie6 needs special treatment to render the page correctly"\n    $ klog list %a6a0 [ 0] [open] [bug] IE6 not rendering page correctly\n    $ klog view a6a0\n    UID: a6a0\n    Type: bug\n    Title: IE6 not rendering page correctly\n    Added: 2012-09-12_22-09-13.966\n    Author: Billy Moon\n    Status: open\n\n    ie6 needs special treatment to render the page correctly\n    $ # business as usual\n\n### Issue tracking\n\nfiles are stored as plain text files, with a filename (bug id) which uses a\nhash based on the exact time the issue was raised (millisecond precision) and\nthe author\'s email address. these firstbits become the UID of the issue,\npreventing colision with other issues being raised by other developers at the\nsame time.\n\nby keeping all the issues with the git repo, it becomes a great offline tool\nfor managing a project. any developer who has the repo, also has the tools\nneeded to track progress, pick a task to work on, and read the rationale\nbehind chages to the code. this feature is also great for archiving projects,\nwith the confidence that all the related discussion and material is all in one\nplace!\n\n_this project is very much in it\'s early stages and should be considered a\ndevelopment project, not yet fit for production. watch out for version 1.0.0!_\n\n',
+54 silly publish   dist: { shasum: 'c09a0c3d0d173c611e34adeb96f8e198c66b3269' } }
+55 verbose url raw klog
+56 verbose url resolving [ 'https://registry.npmjs.org/', './klog' ]
+57 verbose url resolved https://registry.npmjs.org/klog
+58 http PUT https://registry.npmjs.org/klog
+59 http 409 https://registry.npmjs.org/klog
+60 verbose url raw klog
+61 verbose url resolving [ 'https://registry.npmjs.org/', './klog' ]
+62 verbose url resolved https://registry.npmjs.org/klog
+63 http GET https://registry.npmjs.org/klog
+64 http 200 https://registry.npmjs.org/klog
+65 error publish fail Cannot publish over existing version.
+65 error publish fail Bump the 'version' field, set the --force flag, or
+65 error publish fail     npm unpublish 'klog@0.5.0'
+65 error publish fail and try again
+66 error System Darwin 12.2.0
+67 error command "node" "/usr/local/bin/npm" "publish"
+68 error cwd /Users/itaccess/Documents/projects/mine/klog-files/klog/nodejs
+69 error node -v v0.8.10
+70 error npm -v 1.1.26
+71 error code EPUBLISHCONFLICT
+72 error message publish fail
+73 verbose exit [ 1, true ]
