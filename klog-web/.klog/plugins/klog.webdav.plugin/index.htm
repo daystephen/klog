@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Klog Issues: Offline (emergency) edition</title>
+  <!-- // <script src="http://local/lib/steal/steal.js"></script> -->
+  <script src="lib/sugar/sugar.js"></script>
+  <script src="lib/jquery/jquery.js"></script>
+  <link rel="stylesheet" href="lib/google_buttons/google_buttons.css">
+  <!-- // <script src="lib/jquery/jquery.js"></script> -->
+
+  <script>
+  // steal("jquery",function(){
+  $(function(){
+ 
+    klog = {
+    
+    	base: "../../",
+
+      issues: [],
+
+      getAllIssues: function(cb){
+        $.get(klog.base + "issues/",function(d){
+          is = []
+        	$("a",d).each(function(){
+        		$this = $(this)
+        		if ($this.attr("href").match(/klog\.[a-zA-Z0-9]{4}\.issue\.md/)) {
+        			is.push($this.attr("href"))
+        		}
+        	})
+        	   
+          var then = new Date()
+          got = 0
+          for(i in is){
+              $.get(klog.base + "issues/"+is[i],function(d){
+                  klog.issues.push(d)
+                  got++
+                  if(got == is.length){
+                      // alert((new Date())-then)
+                      cb()
+                  }
+              },"text")
+          }
+
+        }, function(e){
+        	alert(e)
+        }, "text")
+      } // get all issues
+      
+    }
+
+		buttons = $('<div class="but"></div>')
+		load = $('<a href="#" class="redbtn">load</a>').on('click',function(){
+			klog.getAllIssues(function(){
+				klog.issues.each(function(v, i){
+					$("#content").append(marked(v))
+				})
+			})
+		})
+		buttons.append(load)
+    $(".navbar .container").append(buttons)
+
+  })
+  </script>
+</head>
+<body>
+  <xmp style="display:none;">
+# Klog Issues
+  </xmp>
+
+  <script src="lib/strapdown/strapdown.js"></script>
+</body>
+</html>

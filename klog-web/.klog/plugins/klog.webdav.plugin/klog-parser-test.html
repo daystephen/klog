@@ -1,0 +1,53 @@
+<!DOCTYPE HTML>
+<html><head>
+
+	<meta charset="utf-8">
+	<title>klog parser</title>
+
+	<script src="lib/coffeescript/coffeescript.js" type="text/javascript"></script>
+	<script src="lib/jquery/jquery.js" type="text/javascript"></script>
+	<script src="lib/underscore/underscore-min.js" type="text/javascript"></script>
+	<script src="lib/markdown/markdown.js" type="text/javascript"></script>
+		
+	<script src="jquery.emulate-console.coffee" type="text/coffeescript"></script>
+	
+	<script src="klog.coffee" type="text/coffeescript"></script>
+	<script src="klog-parser-test.coffee" type="text/coffeescript"></script>
+	
+	<script type="text/template" id="klog-template">
+		<h2><%= meta.Title %></h2>
+		<ul>
+			<% delete meta.Title %>
+			<% _.each(meta, function(item, k){ %><li><%= k.replace(/(mod\w+)/i,"Last $1") + ": " + item %></li><% }) %>
+		</ul>
+		<%= marked( history[0].Message ) %>
+		<% history.shift() %>
+		<% _.each(history, function(item){ %>
+		<hr>
+		<ul>
+		<% _.each(item, function(v,k){ %>
+			<% if(k != "Message"){ %><li><%= k %>: <%= v %></li><% } %>
+		<% }) %>
+		</ul>
+		<% // alert(JSON.stringify(item)) %>
+		<% if(item.Message){ %><%= marked( item.Message ) %><% } %>
+		<% }) %>
+	</script>
+	
+	<script type="text/coffeescript">
+		
+		klogs = JSON.parse $("#log").html()
+		
+		template = _.template $("#klog-template").text()
+		
+		_(klogs).each (klog)->
+
+			$("body").prepend template klog
+		
+	</script>
+
+</head><body>
+
+	<pre id="log"></pre>
+
+</body></html>

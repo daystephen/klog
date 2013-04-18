@@ -1,0 +1,4 @@
+{
+	"name": "webav",
+	"description": "Serve this folder (or alias to it) via webdav for access to web interface to klog"
+}
