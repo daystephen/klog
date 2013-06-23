@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8">
+  <title>Klog Web Interface</title>
+
+  <script src="lib/sugar/sugar.js"></script>
+  <script src="lib/jquery/jquery.js"></script>
+  <script src="lib/coffeescript/coffeescript.js"></script>
+  <link rel="stylesheet" href="lib/google_buttons/google_buttons.css">
+
+  <script type="text/coffeescript">
+
+    $ ->
+      klog =
+        base: "../../"
+        issues: []
+        getAllIssues: (cb) ->
+          $.get klog.base + "issues/", (d) ->
+            is_ = []
+            $("a", d).each ->
+              $this = $(this)
+              is_.push $this.attr("href")  if $this.attr("href").match(/klog\.[a-zA-Z0-9]{4}\.issue\.md/)
+
+            then_ = new Date()
+            got = 0
+            for i of is_
+              $.get klog.base + "issues/" + is_[i], ((d) ->
+                klog.issues.push d
+                got++
+                
+                cb()  if got is is_.length
+              ), "text"
+          , (e) ->
+            alert e
+          , "text"
+
+      # get all issues
+      buttons = $("<div class=\"buttons\"></div>")
+      load = $("<a href=\"#\" class=\"blue\">load</a>").on "click", ->
+        klog.getAllIssues ->
+          klog.issues.each (v, i) ->
+            $("#content").append marked(v)
+
+      buttons.append load
+      $(".navbar .container").append buttons
+
+  </script>
+
+</head>
+<body>
+
+  <xmp style="display:none;">
+# Klog Issues
+  </xmp>
+
+  <p><a href="./" class="button green"><span class="red label">action</span>: reload</a></p>
+
+  <script src="lib/strapdown/strapdown.js"></script>
+  
+</body>
+</html>

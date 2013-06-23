@@ -1,0 +1,47 @@
+<!DOCTYPE HTML>
+<html><head>
+
+  <meta charset="utf-8">
+  <title>klog parser</title>
+
+  <script src="lib/coffeescript/coffeescript.js" type="text/javascript"></script>
+  <script src="lib/jquery/jquery.js" type="text/javascript"></script>
+  <script src="lib/underscore/underscore-min.js" type="text/javascript"></script>
+  <script src="lib/marked/marked.js" type="text/javascript"></script>
+    
+  <script src="klog.coffee" type="text/coffeescript"></script>
+  <link rel="stylesheet" href="klog.css">
+
+  <script type="text/template" id="klog-template">
+    <div class="klog issue">
+    <h2 class="title"><%= title %></h2>
+    <ul class="meta"><% _.each(meta, function(item, k){ %>
+      <li><%= k.replace(/(mod\w+)/i,"Last $1") + ": " + item %></li><% }) %>
+    </ul>
+    <%= marked( message ) %><% _.each(updates, function(item){ %>
+    <span class="update">
+    <hr>
+    <ul class="meta"><% _.each(item.meta, function(v,k){ %>
+      <li><%= k %>: <%= v %></li><% }) %>
+    </ul>
+    </span>
+    <% }) %></div>
+  </script>
+  
+  <script type="text/coffeescript">
+
+    template = _.template $("#klog-template").text()
+
+    klog.loadFromWeb '../.klog/', (issues)->
+        klogs = klog issues
+        $body = $ "body"
+        $body.append template klogs[0]
+        $body.append template klogs[1]
+        $body.append template klogs[2]
+        $body.append template klogs[3]    
+
+  </script>
+
+</head><body>
+
+</body></html>

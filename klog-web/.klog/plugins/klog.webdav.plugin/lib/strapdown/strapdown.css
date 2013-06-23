@@ -1,3 +1,4 @@
+/*
 @font-face {
   font-family: 'Cabin';
   font-style: normal;
@@ -34,12 +35,14 @@
   font-weight: 300;
   src: local('Josefin Sans Light'), local('JosefinSans-Light'), url(fonts/C6HYlRF50SGJq1XyXj04zwV_pQ1T3xN3K1c3sB361us.ttf) format('truetype');
 }
+*/
 @font-face {
   font-family: 'Josefin Sans';
   font-style: normal;
   font-weight: 400;
   src: local('Josefin Sans'), local('JosefinSans'), url(fonts/xgzbb53t8j-Mo-vYa23n5onF5uFdDttMLvmWuJdhhgs.ttf) format('truetype');
 }
+/*
 @font-face {
   font-family: 'Josefin Sans';
   font-style: normal;
@@ -89,6 +92,7 @@
   src: local('Ubuntu'), url(fonts/2Q-AW1e_taO6pHwMXcXW5w.ttf) format('truetype');
 }
 
+*/
 /*******************************************************************
 
 This chunk is to fix Bootstrap so that the Markdown output looks good

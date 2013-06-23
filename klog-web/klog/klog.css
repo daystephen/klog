@@ -1,0 +1,15 @@
+.klog.issue {
+    margin: 2em;
+    padding: 2em;
+    width: 600px;
+    background: #efecea;
+}
+.klog.issue pre {
+    overflow: auto;
+    background: #fff;
+    padding: 1em;
+}
+.klog.issue .meta {
+    background: #cdcdaa;
+    padding: 1em 1.5em;
+}
