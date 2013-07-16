@@ -66,6 +66,14 @@
         # handle meta
         else if m = line.match /[+*-]\s*(\w+):\s*(.+)/
 
+          [k, v] = m[1..2]
+
+          if k.match /added|modified/i
+            v = v.replace /(\d\d\d\d-\d\d-\d\d) (\d\d:\d\d)(:\d\d)?/, (x, d, t, s)->
+              "#{d}T#{t}#{if s then s else ':00'}Z"
+            #alert v
+            v = new Date v
+
           # handle start meta
           # if lastline.match /^##\s*(.+)|---+$/
           if lastline.match /^---+$/
@@ -77,8 +85,8 @@
               message: ""
             current = update
 
-          issue.meta[m[1]] = m[2]
-          current.meta[m[1]] = m[2]
+          issue.meta[k.replace /(modifie(d|r))/i, "Last$1"] = v
+          current.meta[k] = v
 
         # handle end meta
         # we know the line we are on is not a meta line because of last condition section
@@ -112,22 +120,23 @@
       issue_ids = []
       $("a", d).each ->
         $this = $ @
-        issue_ids.push $this.attr("href") if $this.attr("href").match(/klog\.[a-zA-Z0-9]{4}\.issue\.md/)
-
-      got = 0
-      issues = []
-      for id of issue_ids
-        $.get base + "issues/" + issue_ids[id], (issue) ->
-          issues.push issue
-          got++
-          
-          if got is issue_ids.length
-            cb(issues)
-
-        , "text"
+        issue_ids.push m[1] if m = $this.attr("href").match(/klog\.([a-zA-Z0-9]{4})\.issue\.md/)
+      self.loadFromIndexes(base, issue_ids, cb)
     , (e) ->
       alert e
     , "text"
+   
+  self.loadFromIndexes = (base, issue_ids, cb)->
+    got = 0
+    issues = []
+    for id of issue_ids
+      $.get base + "issues/klog.#{issue_ids[id]}.issue.md", (issue) ->
+        issues.push issue
+        got++
+        if got is issue_ids.length
+          cb(issues)
+
+      , "text"
 
   if typeof exports is "object"
     module.exports = self
