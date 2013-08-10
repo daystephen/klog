@@ -1,6 +1,6 @@
 ## Have you got klogs on?
 
-klog - A simple distributed bug tracking system.
+klog - A simple distributed issue tracking system.
 
 ## About
 
